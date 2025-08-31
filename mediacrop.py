@@ -1249,6 +1249,7 @@ class CropHandler(BaseHTTPRequestHandler):
         document.addEventListener('touchend', resizeHandlers.stop);
       }},
       
+      // FIXED: Reworked resize logic to prevent crop box from shifting position during corner resize.
       move: utils.throttle((e) => {{
         if (!state.isResizing) return;
         
@@ -1257,32 +1258,52 @@ class CropHandler(BaseHTTPRequestHandler):
         const deltaX = coords.x - state.startMouseX;
         const deltaY = coords.y - state.startMouseY;
         
-        let left = state.startCropLeft;
-        let top = state.startCropTop;
-        let width = state.startCropWidth;
-        let height = state.startCropHeight;
-        
-        // Apply resize based on direction
-        switch (state.resizeDirection) {{
-          case 'se': width += deltaX; height += deltaY; break;
-          case 'sw': left += deltaX; width -= deltaX; height += deltaY; break;
-          case 'ne': width += deltaX; top += deltaY; height -= deltaY; break;
-          case 'nw': left += deltaX; top += deltaY; width -= deltaX; height -= deltaY; break;
-          case 'e': width += deltaX; break;
-          case 'w': left += deltaX; width -= deltaX; break;
-          case 's': height += deltaY; break;
-          case 'n': top += deltaY; height -= deltaY; break;
+        const {{ startCropLeft, startCropTop, startCropWidth, startCropHeight, resizeDirection, aspectRatio, aspectMode }} = state;
+
+        let newLeft = startCropLeft;
+        let newTop = startCropTop;
+        let newWidth = startCropWidth;
+        let newHeight = startCropHeight;
+
+        // Calculate initial dimension changes based on mouse movement
+        if (resizeDirection.includes('e')) {{
+            newWidth = startCropWidth + deltaX;
         }}
-        
+        if (resizeDirection.includes('w')) {{
+            newWidth = startCropWidth - deltaX;
+        }}
+        if (resizeDirection.includes('s')) {{
+            newHeight = startCropHeight + deltaY;
+        }}
+        if (resizeDirection.includes('n')) {{
+            newHeight = startCropHeight - deltaY;
+        }}
+
         // Apply aspect ratio constraints
-        if (state.aspectRatio && state.aspectMode !== "free") {{
-          const isWidthPrimary = ['e', 'w', 'ne', 'nw', 'se', 'sw'].includes(state.resizeDirection);
-          const adjusted = applyAspectRatio(width, height, isWidthPrimary);
-          width = adjusted.width;
-          height = adjusted.height;
+        if (aspectRatio && aspectMode !== "free") {{
+            const isHorizontalResize = resizeDirection === 'e' || resizeDirection === 'w';
+            const isVerticalResize = resizeDirection === 'n' || resizeDirection === 's';
+
+            if (isHorizontalResize) {{
+                newHeight = newWidth / aspectRatio;
+            }} else if (isVerticalResize) {{
+                newWidth = newHeight * aspectRatio;
+            }} else {{ // Corner resize
+                // Let the horizontal change dictate the vertical change for consistency
+                newHeight = newWidth / aspectRatio;
+            }}
         }}
         
-        setCropDimensions(left, top, width, height);
+        // Recalculate position based on the final, constrained dimensions.
+        // This ensures the opposite corner/edge stays anchored correctly.
+        if (resizeDirection.includes('n')) {{
+            newTop = startCropTop + (startCropHeight - newHeight);
+        }}
+        if (resizeDirection.includes('w')) {{
+            newLeft = startCropLeft + (startCropWidth - newWidth);
+        }}
+        
+        setCropDimensions(newLeft, newTop, newWidth, newHeight);
         updateCropInfo();
       }}, 16),
       
@@ -1493,7 +1514,7 @@ class CropHandler(BaseHTTPRequestHandler):
           notification.innerHTML = `
             <div class="notification-title">Crop Saved Successfully!</div>
             <div class="notification-code">crop=${{finalW}}:${{finalH}}:${{finalX}}:${{finalY}}</div>
-            <div class="notification-subtitle">Check your terminal for the output</div>
+            <div class="notification-subtitle">Check your terminal for the full command</div>
           `;
           
           document.body.appendChild(notification);
@@ -1601,58 +1622,81 @@ class CropHandler(BaseHTTPRequestHandler):
             self.wfile.write(html.encode("utf-8"))
 
         elif path == "/file":
+            # IMPROVEMENT: Stream file in chunks for large media and handle Range requests for seeking.
             try:
-                with open(media_file, "rb") as f:
-                    data = f.read()
-                self.send_response(200)
+                if not os.path.exists(media_file) or not os.access(media_file, os.R_OK):
+                    self.send_error(404, f"File not found or not readable: {media_file}")
+                    return
+
+                file_size = os.path.getsize(media_file)
                 
-                # Comprehensive MIME type mapping
                 mime_types = {
-                    # Images - Common
-                    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-                    '.png': 'image/png', '.webp': 'image/webp',
-                    '.gif': 'image/gif', '.bmp': 'image/bmp',
-                    '.tiff': 'image/tiff', '.tif': 'image/tiff',
-                    
-                    # Images - Modern
-                    '.avif': 'image/avif', '.heic': 'image/heic', 
-                    '.heif': 'image/heif', '.jxl': 'image/jxl',
-                    
-                    # Images - Vector/Other
-                    '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
-                    
-                    # Videos - Common
-                    '.mp4': 'video/mp4', '.webm': 'video/webm',
-                    '.mov': 'video/quicktime', '.ogv': 'video/ogg',
-                    
-                    # Audio - Common
-                    '.mp3': 'audio/mpeg', '.wav': 'audio/wav',
-                    '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
-                    '.flac': 'audio/flac', '.aac': 'audio/aac',
+                    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+                    '.gif': 'image/gif', '.bmp': 'image/bmp', '.tiff': 'image/tiff', '.tif': 'image/tiff',
+                    '.avif': 'image/avif', '.heic': 'image/heic', '.heif': 'image/heif', '.jxl': 'image/jxl',
+                    '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.mp4': 'video/mp4', '.webm': 'video/webm',
+                    '.mov': 'video/quicktime', '.ogv': 'video/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/wav',
+                    '.ogg': 'audio/ogg', '.m4a': 'audio/mp4', '.flac': 'audio/flac', '.aac': 'audio/aac',
                     '.opus': 'audio/opus'
                 }
-                
                 mime_type = mime_types.get(ext, 'application/octet-stream')
-                
-                # Enhanced headers
-                self.send_header("Content-type", mime_type)
-                self.send_header("Content-Length", str(len(data)))
-                self.send_header("Accept-Ranges", "bytes")
-                self.send_header("Cache-Control", "public, max-age=3600")
-                self.send_header("Last-Modified", self.date_time_string(os.path.getmtime(media_file)))
-                
-                # CORS for cross-origin requests
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
-                self.send_header("Access-Control-Allow-Headers", "Range")
-                
-                self.end_headers()
-                self.wfile.write(data)
-                
+
+                range_header = self.headers.get('Range')
+                if range_header:
+                    # Handle Range request (for video seeking)
+                    try:
+                        start_str, end_str = range_header.replace('bytes=', '').split('-')
+                        start = int(start_str) if start_str else 0
+                        end = int(end_str) if end_str else file_size - 1
+                        
+                        if start >= file_size or end >= file_size or start > end:
+                            self.send_response(416) # Range Not Satisfiable
+                            self.send_header('Content-Range', f'bytes */{file_size}')
+                            self.end_headers()
+                            return
+                        
+                        length = end - start + 1
+                        self.send_response(206) # Partial Content
+                        self.send_header('Content-type', mime_type)
+                        self.send_header('Accept-Ranges', 'bytes')
+                        self.send_header('Content-Range', f'bytes {start}-{end}/{file_size}')
+                        self.send_header('Content-Length', str(length))
+                        self.send_header("Last-Modified", self.date_time_string(os.path.getmtime(media_file)))
+                        self.end_headers()
+
+                        with open(media_file, 'rb') as f:
+                            f.seek(start)
+                            remaining = length
+                            while remaining > 0:
+                                chunk_size = min(remaining, 65536) # 64KB chunks
+                                chunk = f.read(chunk_size)
+                                if not chunk: break
+                                self.wfile.write(chunk)
+                                remaining -= len(chunk)
+                    except ValueError:
+                        self.send_error(400, "Invalid Range header")
+                else:
+                    # Handle full file request by streaming
+                    self.send_response(200)
+                    self.send_header("Content-type", mime_type)
+                    self.send_header("Content-Length", str(file_size))
+                    self.send_header("Accept-Ranges", "bytes")
+                    self.send_header("Last-Modified", self.date_time_string(os.path.getmtime(media_file)))
+                    self.end_headers()
+                    
+                    with open(media_file, 'rb') as f:
+                        chunk_size = 1024 * 1024 # 1MB chunks
+                        while True:
+                            chunk = f.read(chunk_size)
+                            if not chunk: break
+                            self.wfile.write(chunk)
+                            
             except FileNotFoundError:
                 self.send_error(404, f"File not found: {media_file}")
             except PermissionError:
                 self.send_error(403, f"Permission denied: {media_file}")
+            except BrokenPipeError:
+                if verbose: self.log_message("Client disconnected (Broken Pipe).")
             except Exception as e:
                 self.send_error(500, f"File error: {str(e)}")
                 
@@ -1677,32 +1721,43 @@ class CropHandler(BaseHTTPRequestHandler):
         if self.path == "/save":
             try:
                 length = int(self.headers.get("Content-Length", 0))
-                if length > 10000:  # Prevent large payloads
+                if length > 10000:
                     self.send_error(413, "Payload too large")
                     return
                     
                 body = self.rfile.read(length)
                 data = json.loads(body.decode("utf-8"))
                 
-                # Validate crop parameters
                 required_fields = ['w', 'h', 'x', 'y']
                 for field in required_fields:
                     if field not in data or not isinstance(data[field], (int, float)) or data[field] < 0:
                         self.send_error(400, f"Invalid {field} parameter")
                         return
                 
-                # Clean terminal output
-                print(f'crop={int(data["w"])}:{int(data["h"])}:{int(data["x"])}:{int(data["y"])}')
+                # IMPROVEMENT: Generate and print the full FFmpeg command to the terminal.
+                w = int(data['w'])
+                h = int(data['h'])
+                x = int(data['x'])
+                y = int(data['y'])
+
+                path_part, ext_part = os.path.splitext(media_file)
+                output_file = f"{path_part}_cropped{ext_part}"
+
+                # Construct the command with quoted paths to handle spaces
+                ffmpeg_command = f'\nffmpeg -i "{media_file}" -vf "crop={w}:{h}:{x}:{y}" "{output_file}"'
+                
+                print(ffmpeg_command)
                 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
                 self.send_header("Cache-Control", "no-cache")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
+                # Keep the original JSON response to avoid changing web view behavior
                 self.wfile.write(json.dumps({
                     "success": True,
                     "message": "Crop parameters saved successfully",
-                    "crop_filter": f"crop={int(data['w'])}:{int(data['h'])}:{int(data['x'])}:{int(data['y'])}",
+                    "crop_filter": f"crop={w}:{h}:{x}:{y}",
                     "timestamp": self.date_time_string()
                 }).encode("utf-8"))
                 
@@ -1740,7 +1795,7 @@ def get_file_info(filepath):
 
 # Yeh maan liya gaya hai ki zaroori modules (sys, os, etc.) file ke shuruaat mein imported hain.
 # __version__ variable ko yahan define karna ek acchi practice hai.
-__version__ = "1.0"
+__version__ = "2.0"
 
 def print_help():
     """Prints the detailed help message for the script."""
@@ -1808,7 +1863,7 @@ def main():
             port_index = sys.argv.index(port_arg) + 1
             if port_index < len(sys.argv):
                 port = int(sys.argv[port_index])
-                if not (1024 <= port <= 65553):
+                if not (1024 <= port <= 65535):
                     raise ValueError("Port must be between 1024 and 65535")
         except (ValueError, IndexError):
             print("Error: Invalid port number provided.")
@@ -1817,9 +1872,16 @@ def main():
     # Get file information
     file_info = get_file_info(media_file)
     if file_info:
+        file_size_gb = file_info['size'] / (1024 * 1024 * 1024)
         file_size_mb = file_info['size'] / (1024 * 1024)
+        
+        if file_size_gb >= 1:
+            size_str = f"{file_size_gb:.2f} GB"
+        else:
+            size_str = f"{file_size_mb:.2f} MB"
+
         print(f"File   : {file_info['name']}")
-        print(f"Size   : {file_size_mb:.2f} MB")
+        print(f"Size   : {size_str}")
         print(f"Format : {file_info['extension'].upper().replace('.', '')}")
     
     # Find available port
@@ -1841,6 +1903,7 @@ def main():
     try:
         if not verbose:
             print(f"Server : {url}")
+            print(f"Open {url} in browser...")
             print()
             print("Tips:")
             print("   • Drag crop box to move anywhere")
@@ -1857,8 +1920,11 @@ def main():
         webbrowser.open(url)
         
         # Start server
-        print(f"Server running on port {port}")
-        print(f"Open http://127.0.0.1:{port} in browser...")
+        if verbose:
+            print(f"Server running on port {port}")
+            print(f"Serving file: {media_file}")
+            print(f"Open {url} in browser")
+        
         server.serve_forever()
         
     except KeyboardInterrupt:
