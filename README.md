@@ -147,13 +147,13 @@ ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output.mp4
 👤 Name:
 **Mallik Mohammad Musaddiq**
 
-* 📧 Email:
+📧 Email:
 [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)
 
-* 🌐 GitHub:
+🌐 GitHub:
 [mallikmusaddiq1](https://github.com/mallikmusaddiq1)
 
-* 🔗 Project Repo:
+🔗 Project Repo:
 [mallikmusaddiq1/mediacrop](https://github.com/mallikmusaddiq1/mediacrop)
 
 ---
