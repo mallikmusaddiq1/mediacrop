@@ -1795,7 +1795,7 @@ def get_file_info(filepath):
 
 # Yeh maan liya gaya hai ki zaroori modules (sys, os, etc.) file ke shuruaat mein imported hain.
 # __version__ variable ko yahan define karna ek acchi practice hai.
-__version__ = "2.0"
+__version__ = "2.0.0"
 
 def print_help():
     """Prints the detailed help message for the script."""
