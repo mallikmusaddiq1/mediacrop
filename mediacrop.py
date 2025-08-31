@@ -1738,6 +1738,10 @@ def get_file_info(filepath):
     except Exception:
         return None
 
+# Yeh maan liya gaya hai ki zaroori modules (sys, os, etc.) file ke shuruaat mein imported hain.
+# __version__ variable ko yahan define karna ek acchi practice hai.
+__version__ = "1.0.0"
+
 def print_help():
     """Prints the detailed help message for the script."""
     print("\nMediaCrop - FFmpeg Crop Tool")
@@ -1750,6 +1754,7 @@ def print_help():
     print("  -h, --help            Show this help message and exit.")
     print("  -v, --verbose         Show detailed server logs.")
     print("  -p N, --port N        Use a specific port for the server (default: 8000).")
+    print("  --version             Show current version and exit.")
     print("\nSupported Preview Formats:")
     print("  Images : JPG, PNG, WEBP, AVIF, GIF, BMP, SVG, ICO")
     print("  Videos : MP4, WEBM, MOV, OGV")
@@ -1761,6 +1766,11 @@ def print_help():
 
 
 def main():
+    # --version flag ka check sabse pehle add kiya gaya hai.
+    if "--version" in sys.argv:
+        print(f"mediacrop {__version__}")
+        sys.exit(0)
+
     # Check for help flag first
     if "--help" in sys.argv or "-h" in sys.argv:
         print_help()
