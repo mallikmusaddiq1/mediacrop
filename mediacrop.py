@@ -300,7 +300,7 @@ class CropHandler(BaseHTTPRequestHandler):
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 30px;
       position: relative;
       background: radial-gradient(circle at center, #1a1a1a 0%, var(--bg-main) 100%);
       min-height: 0;
@@ -312,8 +312,8 @@ class CropHandler(BaseHTTPRequestHandler):
     
     /* FIXED: Custom Green Scrollbars for Media Viewer */
     .media-viewer::-webkit-scrollbar {{
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
     }}
 
     .media-viewer::-webkit-scrollbar-track {{
@@ -436,8 +436,8 @@ class CropHandler(BaseHTTPRequestHandler):
     .resize-handle {{
       position: absolute;
       background: var(--primary);
-      width: 12px;
-      height: 12px;
+      width: 16px;
+      height: 16px;
       border: 2px solid #000;
       border-radius: 50%;
       z-index: 51;
@@ -447,7 +447,7 @@ class CropHandler(BaseHTTPRequestHandler):
 
     .resize-handle:hover {{
       background: #fff;
-      transform: translate(-50%, -50%) scale(1.2);
+      transform: translate(-50%, -50%) scale(1.3);
       box-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
     }}
 
@@ -728,6 +728,12 @@ class CropHandler(BaseHTTPRequestHandler):
         max-width: 100%;
         max-height: 100%;
       }}
+
+      /* UX IMPROVEMENT 3: Larger resize handles for easier touch interaction on mobile devices */
+      .resize-handle {{
+        width: 22px;
+        height: 22px;
+      }}
     }}
 
     /* Utilities */
@@ -806,10 +812,10 @@ class CropHandler(BaseHTTPRequestHandler):
         
         <div class="form-group">
           <div class="button-grid">
-            <button class="form-button" onclick="toggleGrid()">📐 Grid</button>
-            <button class="form-button" onclick="centerCrop()">🎯 Center</button>
-            <button class="form-button" onclick="resetCropSize()">🔄 Reset</button>
-            <button class="form-button" onclick="toggleHelp()">❓ Help</button>
+            <button class="form-button" onclick="toggleGrid()" title="Toggle Rule-of-Thirds Grid (G)">📐 Grid</button>
+            <button class="form-button" onclick="centerCrop()" title="Center the Crop Box (C)">🎯 Center</button>
+            <button class="form-button" onclick="resetCropSize()" title="Reset Crop Box Size & Position">🔄 Reset</button>
+            <button class="form-button" onclick="toggleHelp()" title="Show Keyboard Shortcuts (?)">❓ Help</button>
           </div>
         </div>
         
@@ -915,7 +921,9 @@ class CropHandler(BaseHTTPRequestHandler):
       fileSizeInfo: document.getElementById("fileSizeInfo"),
       loadingIndicator: document.getElementById("loadingIndicator"),
       helpModal: document.getElementById("helpModal"),
-      contextMenu: document.getElementById("contextMenu")
+      contextMenu: document.getElementById("contextMenu"),
+      mediaWrapper: document.getElementById("media-wrapper"),
+      mediaViewer: document.querySelector(".media-viewer")
     }};
 
     // Enhanced state management
@@ -954,7 +962,28 @@ class CropHandler(BaseHTTPRequestHandler):
       
       // File info
       mediaType: "{media_type}",
-      fileExtension: "{ext}"
+      fileExtension: "{ext}",
+
+      // Zoom and pinch
+      zoom: 1,
+      isPinching: false,
+      pinchType: '',
+      pinchInitialDist: 0,
+      pinchInitialZoom: 0,
+      pinchInitialWidth: 0,
+      pinchInitialHeight: 0,
+      pinchInitialLeft: 0,
+      pinchInitialTop: 0,
+      pinchInitialMid: {{x: 0, y: 0}},
+      pinchInitialRelX: 0,
+      pinchInitialRelY: 0,
+      pinchInitialScrollLeft: 0,
+      pinchInitialScrollTop: 0,
+
+      // Auto scroll
+      autoScrollActive: false,
+      mouseX: 0,
+      mouseY: 0
     }};
 
     // Utility functions
@@ -1014,6 +1043,19 @@ class CropHandler(BaseHTTPRequestHandler):
       // Smooth interpolation
       lerp(start, end, factor) {{
         return start + (end - start) * factor;
+      }},
+
+      // Get touch distance
+      getDistance(t1, t2) {{
+        return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+      }},
+
+      // Get touch midpoint
+      getMidpoint(t1, t2) {{
+        return {{
+          x: (t1.clientX + t2.clientX) / 2,
+          y: (t1.clientY + t2.clientY) / 2
+        }};
       }}
     }};
 
@@ -1024,6 +1066,7 @@ class CropHandler(BaseHTTPRequestHandler):
         updateFileInfo();
         positionCropBox();
         updateCropInfo();
+        setMediaZoom(1);
         state.isInitialized = true;
         hideLoading();
         
@@ -1173,14 +1216,37 @@ class CropHandler(BaseHTTPRequestHandler):
       }}
     }}
 
+    // Set media zoom
+    function setMediaZoom(newZoom) {{
+      if (state.mediaType !== 'image' && state.mediaType !== 'video') return;
+      newZoom = Math.max(0.1, Math.min(10, newZoom));
+      const oldZoom = state.zoom;
+      state.zoom = newZoom;
+      if (elements.media) {{
+        elements.media.style.width = (state.naturalWidth * newZoom) + 'px';
+        elements.media.style.height = (state.naturalHeight * newZoom) + 'px';
+      }}
+      const factor = newZoom / oldZoom;
+      elements.crop.style.left = (parseFloat(elements.crop.style.left) * factor) + 'px';
+      elements.crop.style.top = (parseFloat(elements.crop.style.top) * factor) + 'px';
+      elements.crop.style.width = (parseFloat(elements.crop.style.width) * factor) + 'px';
+      elements.crop.style.height = (parseFloat(elements.crop.style.height) * factor) + 'px';
+      updateMediaDimensions();
+      updateCropInfo();
+    }}
+
     // Enhanced dragging with smooth movement
     const dragHandlers = {{
       start(e) {{
         if (e.target.classList.contains('resize-handle')) return;
-        
         e.preventDefault();
         e.stopPropagation();
-        
+        if (e.type.startsWith('touch') && e.touches.length === 2) {{
+          startPinch('crop', e);
+          return;
+        }} else if (e.type.startsWith('touch') && e.touches.length > 1) {{
+          return;
+        }}
         const coords = utils.getEventCoords(e);
         state.isDragging = true;
         state.startMouseX = coords.x;
@@ -1195,6 +1261,9 @@ class CropHandler(BaseHTTPRequestHandler):
         document.addEventListener('mouseup', dragHandlers.stop);
         document.addEventListener('touchmove', dragHandlers.move, {{ passive: false }});
         document.addEventListener('touchend', dragHandlers.stop);
+        document.addEventListener('mousemove', updateMousePos);
+        document.addEventListener('touchmove', updateMousePos);
+        startAutoScroll();
       }},
       
       move: utils.throttle((e) => {{
@@ -1224,6 +1293,9 @@ class CropHandler(BaseHTTPRequestHandler):
         document.removeEventListener('mouseup', dragHandlers.stop);
         document.removeEventListener('touchmove', dragHandlers.move);
         document.removeEventListener('touchend', dragHandlers.stop);
+        document.removeEventListener('mousemove', updateMousePos);
+        document.removeEventListener('touchmove', updateMousePos);
+        stopAutoScroll();
       }}
     }};
 
@@ -1247,6 +1319,9 @@ class CropHandler(BaseHTTPRequestHandler):
         document.addEventListener('mouseup', resizeHandlers.stop);
         document.addEventListener('touchmove', resizeHandlers.move, {{ passive: false }});
         document.addEventListener('touchend', resizeHandlers.stop);
+        document.addEventListener('mousemove', updateMousePos);
+        document.addEventListener('touchmove', updateMousePos);
+        startAutoScroll();
       }},
       
       // FIXED: Reworked resize logic to prevent crop box from shifting position during corner resize.
@@ -1314,8 +1389,143 @@ class CropHandler(BaseHTTPRequestHandler):
         document.removeEventListener('mouseup', resizeHandlers.stop);
         document.removeEventListener('touchmove', resizeHandlers.move);
         document.removeEventListener('touchend', resizeHandlers.stop);
+        document.removeEventListener('mousemove', updateMousePos);
+        document.removeEventListener('touchmove', updateMousePos);
+        stopAutoScroll();
       }}
     }};
+
+    // Auto scroll functions
+    function updateMousePos(e) {{
+      const coords = {{ x: e.clientX, y: e.clientY }};
+      state.mouseX = coords.x;
+      state.mouseY = coords.y;
+    }}
+
+    function updateMousePosTouch(e) {{
+      const coords = utils.getEventCoords(e);
+      state.mouseX = coords.x;
+      state.mouseY = coords.y;
+    }}
+
+    function startAutoScroll() {{
+      state.autoScrollActive = true;
+      autoScrollLoop();
+    }}
+
+    function stopAutoScroll() {{
+      state.autoScrollActive = false;
+    }}
+
+    function autoScrollLoop() {{
+      if (!state.autoScrollActive) return;
+      const viewer = elements.mediaViewer;
+      const rect = viewer.getBoundingClientRect();
+      const edgeSize = 50;
+      const scrollSpeed = 10;
+      let dx = 0, dy = 0;
+      if (state.mouseX < rect.left + edgeSize) {{
+        dx = -scrollSpeed * ((rect.left + edgeSize - state.mouseX) / edgeSize);
+      }} else if (state.mouseX > rect.right - edgeSize) {{
+        dx = scrollSpeed * ((state.mouseX - (rect.right - edgeSize)) / edgeSize);
+      }}
+      if (state.mouseY < rect.top + edgeSize) {{
+        dy = -scrollSpeed * ((rect.top + edgeSize - state.mouseY) / edgeSize);
+      }} else if (state.mouseY > rect.bottom - edgeSize) {{
+        dy = scrollSpeed * ((state.mouseY - (rect.bottom - edgeSize)) / edgeSize);
+      }}
+      if (dx !== 0 || dy !== 0) {{
+        viewer.scrollLeft += dx;
+        viewer.scrollTop += dy;
+        state.startMouseX -= dx;
+        state.startMouseY -= dy;
+        if (state.isDragging) {{
+          dragHandlers.move({{ clientX: state.mouseX, clientY: state.mouseY }});
+        }} else if (state.isResizing) {{
+          resizeHandlers.move({{ clientX: state.mouseX, clientY: state.mouseY }});
+        }}
+      }}
+      requestAnimationFrame(autoScrollLoop);
+    }}
+
+    // Pinch handlers
+    function startPinch(type, e) {{
+      if (type === 'media' && state.mediaType !== 'image' && state.mediaType !== 'video') return;
+      state.isPinching = true;
+      state.pinchType = type;
+      state.pinchInitialDist = utils.getDistance(e.touches[0], e.touches[1]);
+      if (type === 'crop') {{
+        state.pinchInitialWidth = parseInt(elements.crop.style.width);
+        state.pinchInitialHeight = parseInt(elements.crop.style.height);
+        state.pinchInitialLeft = parseInt(elements.crop.style.left);
+        state.pinchInitialTop = parseInt(elements.crop.style.top);
+      }} else {{
+        state.pinchInitialZoom = state.zoom;
+        state.pinchInitialMid = utils.getMidpoint(e.touches[0], e.touches[1]);
+        const viewerRect = elements.mediaViewer.getBoundingClientRect();
+        state.pinchInitialRelX = state.pinchInitialMid.x - viewerRect.left;
+        state.pinchInitialRelY = state.pinchInitialMid.y - viewerRect.top;
+        state.pinchInitialScrollLeft = elements.mediaViewer.scrollLeft;
+        state.pinchInitialScrollTop = elements.mediaViewer.scrollTop;
+      }}
+      document.addEventListener('touchmove', handlePinchMove, {{ passive: false }});
+      document.addEventListener('touchend', handlePinchEnd);
+    }}
+
+    function handlePinchMove(e) {{
+      if (!state.isPinching || e.touches.length !== 2) return;
+      e.preventDefault();
+      const newDist = utils.getDistance(e.touches[0], e.touches[1]);
+      const factor = newDist / state.pinchInitialDist;
+      if (state.pinchType === 'crop') {{
+        let newWidth = state.pinchInitialWidth * factor;
+        let newHeight = state.pinchInitialHeight * factor;
+        const dims = applyAspectRatio(newWidth, newHeight);
+        newWidth = dims.width;
+        newHeight = dims.height;
+        const deltaW = newWidth - state.pinchInitialWidth;
+        const deltaH = newHeight - state.pinchInitialHeight;
+        const newLeft = state.pinchInitialLeft - deltaW / 2;
+        const newTop = state.pinchInitialTop - deltaH / 2;
+        setCropDimensions(newLeft, newTop, newWidth, newHeight);
+        updateCropInfo();
+      }} else {{
+        const newZoom = state.pinchInitialZoom * factor;
+        setMediaZoom(newZoom);
+        const newFactor = newZoom / state.pinchInitialZoom;
+        elements.mediaViewer.scrollLeft = state.pinchInitialScrollLeft * newFactor + state.pinchInitialRelX * (newFactor - 1);
+        elements.mediaViewer.scrollTop = state.pinchInitialScrollTop * newFactor + state.pinchInitialRelY * (newFactor - 1);
+      }}
+    }}
+
+    function handlePinchEnd() {{
+      state.isPinching = false;
+      state.pinchType = '';
+      document.removeEventListener('touchmove', handlePinchMove);
+      document.removeEventListener('touchend', handlePinchEnd);
+    }}
+
+    // Mouse wheel zoom handler
+    function handleMouseWheelZoom(e) {{
+      // Yeh browser ko page scroll karne se rokta hai
+      e.preventDefault();
+
+      // Scroll up (deltaY < 0) matlab zoom in
+      // Scroll down (deltaY > 0) matlab zoom out
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      
+      const newZoom = state.zoom * zoomFactor;
+      
+      // Aapka banaya hua zoom function call karein
+      setMediaZoom(newZoom);
+    }}
+
+    function handleMediaTouchStart(e) {{
+      if (e.touches.length === 2) {{
+        e.preventDefault();
+        startPinch('media', e);
+      }}
+    }}
 
     // Keyboard navigation support
     function handleKeyboard(e) {{
@@ -1444,6 +1654,7 @@ class CropHandler(BaseHTTPRequestHandler):
         }} else {{
           const parts = state.aspectMode.split(":");
           state.aspectRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
+          // UX IMPROVEMENT 1: Automatically apply the selected aspect ratio to the crop box
           applyCurrentAspectRatio();
         }}
       }}
@@ -1464,6 +1675,7 @@ class CropHandler(BaseHTTPRequestHandler):
       const currentLeft = parseInt(elements.crop.style.left) || 0;
       const currentTop = parseInt(elements.crop.style.top) || 0;
       const currentWidth = parseInt(elements.crop.style.width) || 0;
+      // Let's base the new height on the current width to maintain position and size as much as possible
       const newHeight = Math.round(currentWidth / state.aspectRatio);
       
       setCropDimensions(currentLeft, currentTop, currentWidth, newHeight, true);
@@ -1557,6 +1769,12 @@ class CropHandler(BaseHTTPRequestHandler):
         handle.addEventListener("mousedown", resizeHandlers.start);
         handle.addEventListener("touchstart", resizeHandlers.start, {{ passive: false }});
       }});
+      
+      // Media wrapper for outside touches
+      elements.mediaWrapper.addEventListener("touchstart", handleMediaTouchStart, {{ passive: false }});
+      
+      // Mouse wheel zoom listener
+      elements.mediaViewer.addEventListener("wheel", handleMouseWheelZoom, {{ passive: false }});
       
       // Aspect ratio controls
       elements.aspectSelect.addEventListener("change", handleAspectRatioChange);
@@ -1795,11 +2013,11 @@ def get_file_info(filepath):
 
 # Yeh maan liya gaya hai ki zaroori modules (sys, os, etc.) file ke shuruaat mein imported hain.
 # __version__ variable ko yahan define karna ek acchi practice hai.
-__version__ = "2.0.0"
+__version__ = "2.1.5"
 
 def print_help():
     """Prints the detailed help message for the script."""
-    print("\nMediaCrop - FFmpeg Crop Tool")
+    print("\nmediacrop - Visual FFmpeg Crop Tool")
     print("=" * 50)
     print("A web-based visual tool to get FFmpeg crop coordinates for media files.")
     print("\nUsage:")
@@ -1809,6 +2027,7 @@ def print_help():
     print("  -h, --help            Show this help message and exit.")
     print("  -v, --verbose         Show detailed server logs.")
     print("  -p N, --port N        Use a specific port for the server (default: 8000).")
+    print("  --host HOST           Specify host address (default: 127.0.0.1).")
     print("  --version             Show current version and exit.")
     print("\nSupported Preview Formats:")
     print("  Images : JPG, PNG, WEBP, AVIF, GIF, BMP, SVG, ICO")
@@ -1851,6 +2070,7 @@ def main():
     # Parse arguments
     verbose = "--verbose" in sys.argv or "-v" in sys.argv
     port = 8000
+    host = "127.0.0.1"
     
     port_arg = None
     if "--port" in sys.argv:
@@ -1867,6 +2087,15 @@ def main():
                     raise ValueError("Port must be between 1024 and 65535")
         except (ValueError, IndexError):
             print("Error: Invalid port number provided.")
+            sys.exit(1)
+
+    if "--host" in sys.argv:
+        try:
+            host_index = sys.argv.index("--host") + 1
+            if host_index < len(sys.argv):
+                host = sys.argv[host_index]
+        except IndexError:
+            print("Error: No host provided after --host.")
             sys.exit(1)
 
     # Get file information
@@ -1888,17 +2117,17 @@ def main():
     original_port = port
     for attempt in range(10):
         try:
-            server = HTTPServer(("127.0.0.1", port), CropHandler)
+            server = HTTPServer((host, port), CropHandler)
             break
         except OSError as e:
             if attempt == 0 and port != original_port:
                 print(f"Port {original_port} busy, trying {port}")
             port += 1
     else:
-        print("Error: Could not find available port")
+        print("Error: Could not find available port, try default")
         sys.exit(1)
     
-    url = f"http://127.0.0.1:{port}"
+    url = f"http://{host}:{port}"
     
     try:
         if not verbose:
@@ -1923,7 +2152,7 @@ def main():
         if verbose:
             print(f"Server running on port {port}")
             print(f"Serving file: {media_file}")
-            print(f"Open {url} in browser")
+            print(f"Open {url} in browser...")
         
         server.serve_forever()
         
