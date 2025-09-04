@@ -121,14 +121,10 @@ MediaCrop provides a perfectly formatted FFmpeg crop string.
 
 **Example Output:**
 
-```bash
-crop=1280:720:320:180  
-```
-
 Use it with FFmpeg:
 
 ```bash
-ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output.mp4  
+ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output_cropped.mp4  
 ```
 
 ---
