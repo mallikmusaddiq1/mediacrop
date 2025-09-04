@@ -6,7 +6,7 @@
 [![Downloads](https://static.pepy.tech/badge/mediacrop)](https://pepy.tech/project/mediacrop)
 [![Last Commit](https://img.shields.io/github/last-commit/mallikmusaddiq1/mediacrop.svg)](https://github.com/mallikmusaddiq1/mediacrop/commits/main)
 [![Stars](https://img.shields.io/github/stars/mallikmusaddiq1/mediacrop.svg)](https://github.com/mallikmusaddiq1/mediacrop/stargazers)
-[![Instagram](https://img.shields.io/badge/Instagram-%40musaddiq.x7-E4405F?logo=instagram&logoColor=white)](https://instagram.com/musaddiq.x7)
+[![Instagram](https://img.shields.io/badge/Instagram-%40musaddiq.x7-E4405F?logo=instagram\&logoColor=white)](https://instagram.com/musaddiq.x7)
 
 **MediaCrop** is a modern, lightweight, web-based visual tool that helps you get FFmpeg crop coordinates for any media file (video, image, or audio) with zero guesswork. Just drag, resize, and get the exact crop string you need.
 
@@ -23,9 +23,11 @@ Working with **FFmpeg** is powerful, but not always simple. One of the most frus
 * Running the FFmpeg command.
 * Repeating until it looked right.
 
-This trial-and-error process wastes time and energy. I created **MediaCrop** to provide a **visual, drag-and-drop solution** to get these coordinates instantly.
+This trial-and-error process wastes time and energy. People would spend hours tweaking numbers blindly, feeling stuck between the complexity of FFmpeg and the lack of a simple GUI. It was like trying to cut glass in the dark—every small mistake meant starting over.
 
-With MediaCrop, you just draw a box, and the tool gives you the **FFmpeg-ready crop filter string**. No stress. No repeated guessing. Just **precision with ease**.
+I created **MediaCrop** to solve this exact pain. A **visual, drag-and-drop solution** that ends the frustration. With MediaCrop, you just draw a box, and the tool gives you the **FFmpeg-ready crop filter string**. No stress. No repeated guessing. Just **precision with ease**.
+
+And that is why users across platforms have found it a relief—because finally, FFmpeg feels less like a maze and more like a tool you can actually control.
 
 ---
 
@@ -70,20 +72,20 @@ You only need **Python 3.7+** installed on your system.
 ### Option 1: From PyPI (Recommended)
 
 ```bash
-pip install mediacrop
+pip install mediacrop  
 ```
 
 ### Option 2: From Source
 
 ```bash
-# Clone the repository
-git clone https://github.com/mallikmusaddiq1/mediacrop.git
+# Clone the repository  
+git clone https://github.com/mallikmusaddiq1/mediacrop.git  
 
-# Navigate into the directory
-cd mediacrop
+# Navigate into the directory  
+cd mediacrop  
 
-# Install locally
-pip install .
+# Install locally  
+pip install .  
 ```
 
 ---
@@ -93,7 +95,7 @@ pip install .
 Using the tool is simple:
 
 ```bash
-mediacrop "/path/to/your/mediafile.mp4"
+mediacrop "/path/to/your/mediafile.mp4"  
 ```
 
 * Use quotes `""` if the path contains spaces.
@@ -120,13 +122,13 @@ MediaCrop provides a perfectly formatted FFmpeg crop string.
 **Example Output:**
 
 ```bash
-crop=1280:720:320:180
+crop=1280:720:320:180  
 ```
 
 Use it with FFmpeg:
 
 ```bash
-ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output.mp4
+ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output.mp4  
 ```
 
 ---
@@ -143,6 +145,21 @@ ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output.mp4
 | Save Coordinates | `Enter` or 💾 Save button      |
 | Open/Close Help  | ❓ Help button / `Esc` to close |
 | Context Menu     | Right-click on crop box        |
+
+---
+
+## 🤝 Contribution
+
+Contributions are more than welcome! If you find bugs, want new features, or have ideas to improve MediaCrop, feel free to:
+
+1. **Fork** the repository.
+2. **Create** a new branch with your feature or fix.
+3. **Commit** your changes with clear messages.
+4. **Open a Pull Request**.
+
+Every contribution matters, whether it’s a bug fix, feature request, or even just improving the documentation. Together, we can make MediaCrop the go-to visual tool for FFmpeg lovers.
+
+If you like this project, don’t forget to **leave a star ⭐** on GitHub—it really helps the project grow and motivates further development!
 
 ---
 
