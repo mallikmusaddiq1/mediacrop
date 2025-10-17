@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mediacrop"
-version = "3.0.0"
+version = "3.1.0"
 authors = [
   { name = "Mallik Mohammad Musaddiq", email = "mallikmusaddiq1@gmail.com" }
 ]
-description = "A web-based visual tool to get FFmpeg crop coordinates for any media file."
+description = "A CLI tool featuring a localhost web interface for visually determining FFmpeg crop coordinates of any media file."
 readme = "README.md"
 requires-python = ">=3.7"
 license = { file = "LICENSE" }

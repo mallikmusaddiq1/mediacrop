@@ -17,13 +17,13 @@ from utils import get_file_info
 media_file = None
 verbose = False
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 
 def print_help():
     """Prints the detailed help message for the script."""
     print("\nmediacrop - Visual FFmpeg Crop Tool")
     print("=" * 50)
-    print("A web-based visual tool to get FFmpeg crop coordinates for media files.")
+    print("A CLI tool featuring a localhost web interface for visually determining FFmpeg crop coordinates of any media file.")
     print("\nUsage:")
     print("""  mediacrop <media_file>
                         Path to the video or image.""")

@@ -2,10 +2,10 @@ from setuptools import setup
 
 setup(
     name="mediacrop",
-    version="3.0.0",
+    version="3.1.0",
     author="Mallik Mohammad Musaddiq",
     author_email="mallikmusaddiq1@gmail.com",
-    description="A web-based visual tool to get FFmpeg crop coordinates for any media file.",
+    description="A CLI tool featuring a localhost web interface for visually determining FFmpeg crop coordinates of any media file.",
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/mallikmusaddiq1/mediacrop",
