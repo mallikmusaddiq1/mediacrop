@@ -35,7 +35,7 @@ And that is why users across platforms have found it a relief—because finally,
 
 A modern, dark-themed interface that's fully responsive and works on any device.
 
-![MediaCrop Desktop Screenshot](Screenshots/Screenshot-719x1086.png)
+![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1979.png)
 
 ---
 
