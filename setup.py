@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="mediacrop",
-    version="3.1.0",
+    version="3.5.0",
     author="Mallik Mohammad Musaddiq",
     author_email="mallikmusaddiq1@gmail.com",
     description="A CLI tool featuring a localhost web interface for visually determining FFmpeg crop coordinates of any media file.",

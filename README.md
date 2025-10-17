@@ -8,7 +8,7 @@
 [![Stars](https://img.shields.io/github/stars/mallikmusaddiq1/mediacrop.svg)](https://github.com/mallikmusaddiq1/mediacrop/stargazers)
 [![Instagram](https://img.shields.io/badge/Instagram-%40musaddiq.x7-E4405F?logo=instagram\&logoColor=white)](https://instagram.com/musaddiq.x7)
 
-**MediaCrop** is a modern, lightweight, web-based visual tool that helps you get FFmpeg crop coordinates for any media file (video, image, or audio) with zero guesswork. Just drag, resize, and get the exact crop string you need.
+**MediaCrop** is a modern, lightweight, **web-based visual tool** that helps you get **FFmpeg crop coordinates** for any media file (video, image, or audio) with zero guesswork. Just drag, resize, and get the exact crop string you need instantly.
 
 The tool runs a local server and opens a sleek, responsive interface in your browser, providing an intuitive and powerful user experience.
 
@@ -39,19 +39,24 @@ A modern, dark-themed interface that's fully responsive and works on any device.
 
 ---
 
-## ✨ Features
+## ✨ Features (Existing and Updated)
 
-* **🌐 Modern Web Interface:** Sleek, dark-themed UI that runs in your browser. No extra GUI installation needed.
-* **📱 Fully Responsive:** Works seamlessly on both desktop and mobile devices.
-* **🖱️ Interactive Crop Box:** Drag to move and resize with 8 handles for precision.
-* **📐 Advanced Aspect Ratios:** Lock the crop box to presets like 16:9, 4:3, 1:1, Cinemascope, or custom ratios.
-* **📊 Live Info Panel:** Instantly see crop box position (X, Y), size, and aspect ratio.
-* **🔧 Quick Tools:** One-click to center, toggle grid, reset selection, or view help.
-* **⌨️ Full Keyboard Control:** Pixel-perfect adjustments with arrow keys and shortcuts.
-* **🖱️ Context Menu:** Right-click for quick access to common actions.
-* **✅ Broad Format Support:** Preview many common media formats, or set coordinates even if preview is unsupported.
-* **🚀 Zero Dependencies:** Pure Python standard library. No external `pip` installs required.
-* **💻 Cross-Platform:** Works on Windows, macOS, and Linux.
+| Category | Feature | Description |
+| :--- | :--- | :--- |
+| **Interface** | **🌐 Modern Web UI** | Sleek, dark-themed interface that runs in your browser. No extra GUI installation needed. |
+| | **📱 Fully Responsive** | Works seamlessly on desktop, tablet, and mobile devices. |
+| | **⚙️ Server Running Indicator (New)** | Clearly shows the status of the tool's backend operation. |
+| **Cropping** | **🖱️ Interactive Crop Box** | Drag to move and resize with 8 handles for precision. |
+| | **📐 Advanced Aspect Ratios** | Lock the crop box to presets like **16:9, 4:3, 1:1, Cinemascope, or custom ratios**. |
+| | **📐 Rotation Alignment (New)** | Option for quick rotation by **$90^\circ$, $180^\circ$, $270^\circ$**. |
+| **Precision** | **📊 Live Info Panel** | Instantly see crop box position ($X$, $Y$), size, and aspect ratio. |
+| | **⌨️ Full Keyboard Control** | Pixel-perfect adjustments with **arrow keys** and shortcuts. |
+| | **🎯 Quick Center Button** | One-click to set the crop box to the **center of the media**. |
+| **Usability** | **🔧 Quick Tools** | One-click options to center, toggle grid, and reset the selection. |
+| | **🖱️ Context Menu** | Right-click on the crop box for quick access to common actions. |
+| | **✅ Broad Format Support** | Preview many common media formats, or set coordinates even if preview is unsupported. |
+| **Under the Hood** | **🚀 Zero Dependencies** | Pure Python standard library. No external `pip` installs required. |
+| | **💻 Cross-Platform** | Works on Windows, macOS, and Linux. |
 
 ---
 
@@ -73,108 +78,66 @@ You only need **Python 3.7+** installed on your system.
 
 ```bash
 pip install mediacrop  
-```
 
-### Option 2: From Source
-
-```bash
+Option 2: From Source
 # Clone the repository  
-git clone https://github.com/mallikmusaddiq1/mediacrop.git  
+git clone [https://github.com/mallikmusaddiq1/mediacrop.git](https://github.com/mallikmusaddiq1/mediacrop.git)  
 
 # Navigate into the directory  
 cd mediacrop  
 
 # Install locally  
 pip install .  
-```
 
----
-
-## 🚀 Usage
-
+🚀 Usage
 Using the tool is simple:
-
-```bash
 mediacrop "/path/to/your/mediafile.mp4"  
-```
 
-* Use quotes `""` if the path contains spaces.
-* Your default browser will open at [http://127.0.0.1:8000](http://127.0.0.1:8000).
-* Adjust the crop box visually, apply aspect ratio presets, grid, and tools as needed.
-* Click **Save Coordinates**:
-
-  * A notification will confirm success.
-  * The crop filter string is printed in the terminal.
-* Press **Ctrl+C** to stop the server.
-
-### Command-Line Options
-
-* `-p <port>`, `--port <port>`: Use a specific port (default: 8000).
-* `-v`, `--verbose`: Show detailed server logs.
-* `-h`, `--help`: Show help message.
-
----
-
-## 🎬 Using the Output with FFmpeg
-
+ * Use quotes "" if the path contains spaces.
+ * Your default browser will open at http://127.0.0.1:8000.
+ * Adjust the crop box visually, apply aspect ratio presets, grid, and tools as needed.
+ * Click Save Coordinates:
+   * A notification will confirm success.
+   * The crop filter string is printed in the terminal.
+ * Press Ctrl+C to stop the server.
+Command-Line Options
+ * -p <port>, --port <port>: Use a specific port (default: 8000).
+ * -v, --verbose: Show detailed server logs.
+ * -h, --help: Show help message.
+🎬 Using the Output with FFmpeg
 MediaCrop provides a perfectly formatted FFmpeg crop string.
-
-**Example Output:**
-
+Example Output:
+ffmpeg crop string: crop=1280:720:320:180
 Use it with FFmpeg:
-
-```bash
 ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output_cropped.mp4  
-```
 
----
-
-## ⌨️ Controls & Shortcuts
-
-| Action           | Control                        |
-| ---------------- | ------------------------------ |
-| Move Crop Box    | Click & Drag / Arrow Keys      |
-| Fine Move (1px)  | Shift + Arrow Keys             |
-| Resize Crop Box  | Drag one of the 8 handles      |
-| Toggle Grid      | `G` or 📐 Grid button          |
-| Center Crop Box  | `C` or 🎯 Center button        |
-| Save Coordinates | `Enter` or 💾 Save button      |
-| Open/Close Help  | ❓ Help button / `Esc` to close |
-| Context Menu     | Right-click on crop box        |
-
----
-
-## 🤝 Contribution
-
+⌨️ Controls & Shortcuts
+| Action | Control |
+|---|---|
+| Move Crop Box | Click & Drag / Arrow Keys |
+| Fine Move (1px) | Shift + Arrow Keys |
+| Resize Crop Box | Drag one of the 8 handles |
+| Toggle Grid | G or 📐 Grid button |
+| Center Crop Box | C or 🎯 Center button |
+| Save Coordinates | Enter or 💾 Save button |
+| Open/Close Help | ❓ Help button / Esc to close |
+| Context Menu | Right-click on crop box |
+🤝 Contribution
 Contributions are more than welcome! If you find bugs, want new features, or have ideas to improve MediaCrop, feel free to:
-
-1. **Fork** the repository.
-2. **Create** a new branch with your feature or fix.
-3. **Commit** your changes with clear messages.
-4. **Open a Pull Request**.
-
+ * Fork the repository.
+ * Create a new branch with your feature or fix.
+ * Commit your changes with clear messages.
+ * Open a Pull Request.
 Every contribution matters, whether it’s a bug fix, feature request, or even just improving the documentation. Together, we can make MediaCrop the go-to visual tool for FFmpeg lovers.
-
-If you like this project, don’t forget to **leave a star ⭐** on GitHub—it really helps the project grow and motivates further development!
-
----
-
-## 👨‍💻 Author Info:
-
+If you like this project, don’t forget to leave a star ⭐ on GitHub—it really helps the project grow and motivates further development!
+👨‍💻 Author Info:
 👤 Name:
-**Mallik Mohammad Musaddiq**
-
+Mallik Mohammad Musaddiq
 📧 Email:
-[mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)
-
+mallikmusaddiq1@gmail.com
 🌐 GitHub:
-[mallikmusaddiq1](https://github.com/mallikmusaddiq1)
-
+mallikmusaddiq1
 🔗 Project Repo:
-[mallikmusaddiq1/mediacrop](https://github.com/mallikmusaddiq1/mediacrop)
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+mallikmusaddiq1/mediacrop
+📄 License
+This project is licensed under the MIT License. See the LICENSE file for details.

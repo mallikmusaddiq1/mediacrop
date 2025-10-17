@@ -17,7 +17,7 @@ from utils import get_file_info
 media_file = None
 verbose = False
 
-__version__ = "3.1.0"
+__version__ = "3.5.0"
 
 def print_help():
     """Prints the detailed help message for the script."""
