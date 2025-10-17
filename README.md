@@ -52,7 +52,6 @@ A modern dark-themed interface, responsive across devices.
 |               | ⚙️ **Server Status Indicator (New)** | Real-time visual indicator showing backend status.                       |
 | **Cropping**  | 🖱️ **Interactive Crop Box**         | Move and resize with 8 precision handles.                                |
 |               | 📐 **Aspect Ratio Presets**          | Lock to standard or custom ratios: *16:9, 4:3, 1:1, Cinemascope,* etc.   |
-|               | 🔄 **Rotation Alignment (New)**      | Quickly rotate by *90°, 180°, or 270°*.                                  |
 | **Precision** | 📊 **Live Info Panel**               | Displays coordinates *(X, Y)*, width, height, and aspect ratio.          |
 |               | ⌨️ **Keyboard Controls**             | Pixel-perfect movement and resizing via arrow keys.                      |
 |               | 🎯 **Quick Center Button**           | Instantly centers the crop area.                                         |
