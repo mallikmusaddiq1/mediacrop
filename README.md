@@ -170,11 +170,11 @@ If you find value in this project, don’t forget to **star ⭐ it on GitHub** �
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Author Info
 
-**Mallik Mohammad Musaddiq**
+👤 **Name:** Mallik Mohammad Musaddiq
 
-📧 **Email:** [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com]
+📧 **Email:** [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)
 
 🌐 **GitHub:** [mallikmusaddiq1](https://github.com/mallikmusaddiq1)
 
