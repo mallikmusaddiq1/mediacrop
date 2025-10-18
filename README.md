@@ -35,11 +35,12 @@ Now, FFmpeg finally feels accessible, fluid, and precise — the way it was mean
 
 ---
 
-## 🖼️ Screenshot
+## 🖼️ Screenshots
 
-A modern dark-themed interface, responsive across devices.
+A modern dark-themed/light-themed interface, responsive across devices.
 
 ![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1979.png)
+![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1967.png)
 
 ---
 
