@@ -181,8 +181,11 @@ If you find this project valuable, please **star ⭐ it on GitHub** to support f
 ## 👨‍💻 Author
 
 **Name:** Mallik Mohammad Musaddiq
+
 **Email:** [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)
+
 **GitHub:** [mallikmusaddiq1](https://github.com/mallikmusaddiq1)
+
 **Project Repo:** [MediaCrop](https://github.com/mallikmusaddiq1/mediacrop)
 
 ---
