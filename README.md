@@ -1,4 +1,4 @@
-# ✂️ MediaCrop - Visual FFmpeg Crop Tool
+# ✂️ MediaCrop - The Visual FFmpeg Crop Tool
 
 [![Python Version](https://img.shields.io/badge/python-3.7%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,63 +12,61 @@
 
 ## 🧩 Overview
 
-**MediaCrop** is a modern, lightweight **web-based visual tool** that allows you to get **FFmpeg crop coordinates** for any media file — whether it's a video, image, or even audio waveform — without the guesswork. Simply drag, resize, and instantly get your precise FFmpeg crop string.
+**MediaCrop** is a modern, lightweight, web-based utility that removes the guesswork from cropping media using **FFmpeg**. It provides a clean, visual interface to obtain precise crop coordinates for any video, image, or audio file. Simply drag, resize, and instantly get your perfect FFmpeg crop string.
 
-The tool spins up a local web server, launching a sleek, dark-themed, and responsive interface right in your browser — delivering a fast, intuitive, and enjoyable user experience.
+The tool launches a local web server, opening a sleek, responsive browser interface complete with **Light & Dark themes** for a fast, enjoyable, and efficient experience.
 
 ---
 
 ## 📖 The Story Behind MediaCrop
 
-Working with **FFmpeg** is undeniably powerful, but often not straightforward. One of the most frustrating challenges for many users has always been **identifying the correct crop coordinates**. The typical workflow used to involve:
+Working with **FFmpeg** offers immense power, but it's rarely intuitive—especially when it comes to identifying accurate **crop coordinates**. Traditionally, this involved a tedious cycle of:
 
-* Opening the file in a media player.
-* Guessing coordinates by eye.
-* Running the FFmpeg command.
-* Repeating — again and again.
+1. Opening the file in a media player.
+2. Estimating coordinates by sight.
+3. Running the FFmpeg command.
+4. Checking the result and repeating the process.
 
-This repetitive trial-and-error method consumed valuable time and patience. It felt like trying to carve glass in the dark — each mistake meant starting from scratch.
+This endless loop wasted valuable time and energy. **MediaCrop** was conceived to end this frustration—a **visual, drag-and-drop solution** that instantly provides command-line-ready FFmpeg filter strings. No trial and error. No stress. Just **precision made effortless**.
 
-**MediaCrop** was born from that frustration — designed as a **visual, drag-and-drop solution** to eliminate the struggle. You simply draw a box, and the tool instantly gives you an **FFmpeg-ready crop filter string**. No stress. No repetition. Just **pure accuracy with ease**.
+---
 
-Now, FFmpeg finally feels accessible, fluid, and precise — the way it was meant to be.
+## ✨ Key Features
+
+| Category            | Feature                           | Description                                                                                                                      |
+| :------------------ | :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- |
+| **Interface & UX**  | 🌌 **Light & Dark Themes**        | Switch effortlessly between themes, automatically saved in your browser.                                                         |
+|                     | 🖼️ **Floating Live Preview**     | Real-time preview of the cropped area in a movable, resizable window with 8 handles. Supports pinch-to-zoom and fullscreen mode. |
+|                     | 📱 **Responsive Design**          | Automatically adapts to all screens—desktop, tablet, and mobile.                                                                 |
+|                     | 🔎 **Media Zoom**                 | Zoom in/out precisely using mouse wheel or pinch gestures.                                                                       |
+|                     | 🖐️ **Advanced Touch Support**    | Seamless touch gestures for resizing, dragging, and zooming.                                                                     |
+|                     | 🕹️ **Interactive Crop Box**      | Move and resize with 8 directional handles (N, S, E, W, NW, NE, SW, SE).                                                         |
+| **Media Handling**  | ⏯️ **Full Video Controls**        | Includes play/pause, seek bar, playback speed, time display, and volume/mute controls.                                           |
+|                     | 🎵 **Broad Format Support**       | Preview a wide range of image, video, and audio formats, with fallbacks for unsupported files.                                   |
+| **Precision Tools** | 📊 **Aspect Ratio Presets**       | Choose standard ratios like *16:9, 4:3, 9:16, 1:1, 21:9* or enter a custom ratio.                                                |
+|                     | 📊 **Real-Time Info Panel**       | Displays live resolution, crop size, coordinates, aspect ratio, and zoom level.                                                  |
+|                     | ⌨️ **Keyboard Controls**          | Nudge with Arrow Keys (10px) or fine-tune with Shift + Arrow Keys (1px).                                                         |
+| **Usability**       | 🔧 **Quick Tools & Context Menu** | Instantly center, toggle grid, or reset via sidebar or right-click menu.                                                         |
+| **System**          | ⚙️ **Zero Dependencies**          | Runs entirely on Python’s standard library—no installs, no pain.                                                                 |
+|                     | 🔌 **Smart Port Detection**       | Auto-selects a new port if the default (8000) is busy.                                                                           |
+|                     | 💻 **Cross-Platform**             | Fully compatible with Windows, macOS, and Linux.                                                                                 |
 
 ---
 
 ## 🖼️ Screenshots
 
-A modern dark-themed/light-themed interface, responsive across devices.
+A modern interface available in both light and dark themes, optimized for every device.
 
-![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1979.png)
-![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1967.png)
-
----
-
-## ✨ Features
-
-| Category      | Feature                              | Description                                                              |
-| :------------ | :----------------------------------- | :----------------------------------------------------------------------- |
-| **Interface** | 🌐 **Modern Web UI**                 | Elegant dark-themed interface accessible directly via your browser.      |
-|               | 📱 **Fully Responsive**              | Works seamlessly on desktop, tablet, and mobile devices.                 |
-|               | ⚙️ **Server Status Indicator (New)** | Real-time visual indicator showing backend status.                       |
-| **Cropping**  | 🖱️ **Interactive Crop Box**         | Move and resize with 8 precision handles.                                |
-|               | 📐 **Aspect Ratio Presets**          | Lock to standard or custom ratios: *16:9, 4:3, 1:1, Cinemascope,* etc.   |
-| **Precision** | 📊 **Live Info Panel**               | Displays coordinates *(X, Y)*, width, height, and aspect ratio.          |
-|               | ⌨️ **Keyboard Controls**             | Pixel-perfect movement and resizing via arrow keys.                      |
-|               | 🎯 **Quick Center Button**           | Instantly centers the crop area.                                         |
-| **Usability** | 🔧 **Quick Tools**                   | Toggle grid, reset, and center tools for efficient editing.              |
-|               | 🖱️ **Context Menu**                 | Right-click the crop box for fast action access.                         |
-|               | ✅ **Broad Format Support**           | Supports visual preview for multiple formats or manual coordinate entry. |
-| **System**    | 🚀 **Zero Dependencies**             | Runs on Python’s standard library — no external installs required.       |
-|               | 💻 **Cross-Platform**                | Works flawlessly on Windows, macOS, and Linux.                           |
+![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1836.png)
+![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1837.png)
 
 ---
 
 ### 🧠 Supported Preview Formats
 
-MediaCrop can compute coordinates for **any FFmpeg-compatible file**, while offering in-browser preview for the following:
+**MediaCrop** computes coordinates for **any file readable by FFmpeg**, with native in-browser previews for:
 
-* **Images:** JPG, PNG, WEBP, AVIF, GIF, BMP, SVG, ICO
+* **Images:** JPG, PNG, WEBP, AVIF, GIF, BMP, SVG, ICO, HEIC, TIFF
 * **Videos:** MP4, WEBM, MOV, OGV
 * **Audio:** MP3, WAV, FLAC, OGG, M4A, AAC, OPUS
 
@@ -78,22 +76,22 @@ MediaCrop can compute coordinates for **any FFmpeg-compatible file**, while offe
 
 Requires **Python 3.7+**.
 
-### Option 1: From PyPI (Recommended)
+### Option 1: Install from PyPI (Recommended)
 
 ```bash
 pip install mediacrop
 ```
 
-### Option 2: From Source
+### Option 2: Install from Source
 
 ```bash
 # Clone the repository
 git clone https://github.com/mallikmusaddiq1/mediacrop.git
 
-# Navigate into the directory
+# Navigate into the project directory
 cd mediacrop
 
-# Install locally
+# Install the package locally
 pip install .
 ```
 
@@ -101,38 +99,42 @@ pip install .
 
 ## 🚀 Usage
 
+Run the command below in your terminal:
+
 ```bash
 mediacrop "/path/to/your/mediafile.mp4"
 ```
 
-* Use quotes if your path contains spaces.
-* Your browser opens automatically at: `http://127.0.0.1:8000`.
-* Adjust crop visually, apply ratio presets, or use grid tools.
-* Click **Save Coordinates** to confirm.
+> **Note:** Always enclose file paths with spaces in quotes.
 
-  * A success notification will appear.
-  * The FFmpeg crop string prints in the terminal.
-* Press `Ctrl + C` to stop the server.
+* The tool automatically launches in your default browser at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+* Adjust the crop box visually, apply aspect ratios, or toggle the grid overlay.
+* Click **💾 Save Coordinates** to confirm.
 
-### Command-Line Options
-
-| Option                        | Description                          |
-| :---------------------------- | :----------------------------------- |
-| `-p <port>` / `--port <port>` | Use a specific port (default: 8000). |
-| `-v` / `--verbose`            | Enable detailed logs.                |
-| `-h` / `--help`               | Display help message.                |
+  * The FFmpeg crop string appears in your terminal.
+  * Press **Ctrl + C** in the terminal to stop the server.
 
 ---
 
-## 🎬 Using Output with FFmpeg
+### 🕹️ Command-Line Options
 
-MediaCrop produces a ready-to-use crop string:
+| Option                        | Description                                   |
+| :---------------------------- | :-------------------------------------------- |
+| `-p <port>` / `--port <port>` | Specify a custom server port (default: 8000). |
+| `-v` / `--verbose`            | Enable detailed logs for debugging.           |
+| `-h` / `--help`               | Display help message and exit.                |
 
-```bash
-ffmpeg crop string: crop=1280:720:320:180
+---
+
+## 🎬 Using the Output with FFmpeg
+
+MediaCrop produces a command-line-ready crop filter string:
+
+```
+crop=1280:720:320:180
 ```
 
-Apply it directly:
+Apply it directly in your FFmpeg command:
 
 ```bash
 ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output_cropped.mp4
@@ -142,46 +144,49 @@ ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output_cropped.mp4
 
 ## ⌨️ Controls & Shortcuts
 
-| Action           | Shortcut                    |
-| :--------------- | :-------------------------- |
-| Move Crop Box    | Click + Drag / Arrow Keys   |
-| Fine Move (1px)  | Shift + Arrow Keys          |
-| Resize Crop Box  | Drag edges or corners       |
-| Toggle Grid      | G or 📐 Grid button         |
-| Center Box       | C or 🎯 Center button       |
-| Save Coordinates | Enter or 💾 Save button     |
-| Toggle Help      | ❓ or Esc to close           |
-| Context Menu     | Right-click on the crop box |
+| Action             | Control                            |
+| :----------------- | :--------------------------------- |
+| Move Crop Box      | Click + Drag / Arrow Keys          |
+| Fine Move (1px)    | Shift + Arrow Keys                 |
+| Resize Crop Box    | Drag Edges/Corners / Pinch (Touch) |
+| Zoom Media View    | Mouse Wheel / Pinch (Touch)        |
+| Toggle Grid        | G Key                              |
+| Center Crop Box    | C Key                              |
+| Save Coordinates   | Enter Key                          |
+| Toggle Help Panel  | ? Key / Esc to Close               |
+| Access Quick Tools | Right-Click on Crop Box            |
+| Fullscreen Preview | Long-Press on Live Preview Window  |
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome and encouraged! Whether it’s a **bug fix, feature addition, or documentation improvement**, your input helps refine and expand MediaCrop.
+Contributions are warmly welcomed! Whether you fix bugs, add features, or improve documentation—your input helps make MediaCrop even better.
 
-### How to Contribute:
+### How to Contribute
 
 1. Fork this repository.
-2. Create a new branch for your fix or feature.
+2. Create a new branch for your update:
+
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 3. Commit with a clear, descriptive message.
 4. Open a Pull Request.
 
-If you find value in this project, don’t forget to **star ⭐ it on GitHub** — every star fuels motivation for further development.
+If you find this project valuable, please **star ⭐ it on GitHub** to support future development!
 
 ---
 
-## 👨‍💻 Author Info
+## 👨‍💻 Author
 
-👤 **Name:** Mallik Mohammad Musaddiq
-
-📧 **Email:** [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)
-
-🌐 **GitHub:** [mallikmusaddiq1](https://github.com/mallikmusaddiq1)
-
-🔗 **Project Repo:** [mallikmusaddiq1/mediacrop](https://github.com/mallikmusaddiq1/mediacrop)
+**Name:** Mallik Mohammad Musaddiq
+**Email:** [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)
+**GitHub:** [mallikmusaddiq1](https://github.com/mallikmusaddiq1)
+**Project Repo:** [MediaCrop](https://github.com/mallikmusaddiq1/mediacrop)
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details.

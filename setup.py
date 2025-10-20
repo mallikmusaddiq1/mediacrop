@@ -1,22 +1,36 @@
 from setuptools import setup
 
+# Read the contents of the README file for the long description
+with open("README.md", "r", encoding="utf-8") as f:
+    long_description = f.read()
+
 setup(
     name="mediacrop",
-    version="3.5.0",
+    version="4.0.0",
     author="Mallik Mohammad Musaddiq",
     author_email="mallikmusaddiq1@gmail.com",
-    description="A CLI tool featuring a localhost web interface for visually determining FFmpeg crop coordinates of any media file.",
-    long_description=open("README.md", encoding="utf-8").read(),
+    description="A CLI tool for visually determining FFmpeg crop coordinates.",
+    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/mallikmusaddiq1/mediacrop",
     license="MIT",
-    py_modules=["mediacrop", "http_handler", "utils"],  # yeh important hai, sab ek folder me hai
-    python_requires=">=3.7",
+
+    # This is the most important part that includes all your .py files
+    py_modules=[
+        "mediacrop",
+        "http_handler",
+        "http_handler_js",
+        "utils"
+    ],
+
+    # This creates the 'mediacrop' command in the terminal
     entry_points={
         "console_scripts": [
-            "mediacrop=mediacrop:main",
+            "mediacrop = mediacrop:main",
         ],
     },
+
+    python_requires=">=3.7",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
