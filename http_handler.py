@@ -44,10 +44,12 @@ class CropHandler(BaseHTTPRequestHandler):
         controls_html = ""
 
         if ext in supported_image_exts:
-            media_tag = f'<img id="media" src="/file?v={cache_buster}" onload="initializeCrop()" draggable="false" alt="Media file" />'
+            # CHANGE 1: Added oncontextmenu="return false;" to <img>
+            media_tag = f'<img id="media" src="/file?v={cache_buster}" onload="initializeCrop()" draggable="false" alt="Media file" oncontextmenu="return false;" />'
             media_type = "image"
         elif ext in supported_video_exts:
-            media_tag = f'<video id="media" preload="metadata" src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" draggable="false"></video>'
+            # CHANGE 2: Added oncontextmenu="return false;" to <video>
+            media_tag = f'<video id="media" preload="metadata" src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" draggable="false" oncontextmenu="return false;"></video>'
             media_type = "video"
             controls_html = '''
 <div class="video-controls" id="videoControls">
@@ -72,7 +74,8 @@ class CropHandler(BaseHTTPRequestHandler):
   </div>
 </div>'''
         elif ext in supported_audio_exts:
-            media_tag = f'<audio id="media" controls preload="metadata" src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()"></audio>'
+            # Added oncontextmenu="return false;" to <audio> as well for consistency
+            media_tag = f'<audio id="media" controls preload="metadata" src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" oncontextmenu="return false;"></audio>'
             media_type = "audio"
             controls_html = ""
         else:
@@ -87,10 +90,15 @@ class CropHandler(BaseHTTPRequestHandler):
 
         if path == "/":
             media_wrapper_start = '<div id="media-wrapper">'
-            crop_div = '<div id="crop" class="crop-box" style="left:50px;top:50px;width:200px;height:150px;" tabindex="0" role="img" aria-label="Crop selection area"><div class="resize-handle nw"></div><div class="resize-handle ne"></div><div class="resize-handle sw"></div><div class="resize-handle se"></div><div class="resize-handle n"></div><div class="resize-handle s"></div><div class="resize-handle w"></div><div class="resize-handle e"></div></div>'
+            # CHANGE 3: Added oncontextmenu and -webkit-touch-callout to the crop_div
+            crop_div = '<div id="crop" class="crop-box" style="left:50px;top:50px;width:200px;height:150px; -webkit-touch-callout: none;" tabindex="0" role="img" aria-label="Crop selection area" oncontextmenu="return false;"><div class="resize-handle nw"></div><div class="resize-handle ne"></div><div class="resize-handle sw"></div><div class="resize-handle se"></div><div class="resize-handle n"></div><div class="resize-handle s"></div><div class="resize-handle w"></div><div class="resize-handle e"></div></div>'
+            
+            # CHANGE 4: Added a click_overlay div to block events on the dimmed area
+            click_overlay = '<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 49; -webkit-touch-callout: none;" oncontextmenu="return false;"></div>'
             
             if media_type in ["image", "video", "unsupported"]:
-                media_section = media_wrapper_start + media_tag + crop_div + '</div>' + controls_html
+                # Inserted the click_overlay between the media tag and the crop box
+                media_section = media_wrapper_start + media_tag + click_overlay + crop_div + '</div>' + controls_html
             else:
                 media_section = media_wrapper_start + media_tag + '</div>' + controls_html 
             
@@ -453,6 +461,8 @@ class CropHandler(BaseHTTPRequestHandler):
       -moz-user-drag: none;
       -o-user-drag: none;
       user-drag: none;
+      /* CHANGE 5: Added -webkit-touch-callout: none; to the CSS rule */
+      -webkit-touch-callout: none;
       { "controls: none;" if media_type == "video" else "" } 
     }}
 
