@@ -6,50 +6,52 @@
 [![Downloads](https://static.pepy.tech/badge/mediacrop)](https://pepy.tech/project/mediacrop)
 [![Last Commit](https://img.shields.io/github/last-commit/mallikmusaddiq1/mediacrop.svg)](https://github.com/mallikmusaddiq1/mediacrop/commits/main)
 [![Stars](https://img.shields.io/github/stars/mallikmusaddiq1/mediacrop.svg)](https://github.com/mallikmusaddiq1/mediacrop/stargazers)
-[![Instagram](https://img.shields.io/badge/Instagram-%40musaddiq.x7-E4405F?logo=instagram\&logoColor=white)](https://instagram.com/musaddiq.x7)
+[![Instagram](https://img.shields.io/badge/Instagram-%40musaddiq.x7-E4405F?logo=instagram&logoColor=white)](https://instagram.com/musaddiq.x7)
 
 ---
 
 ## 🧩 Overview
 
-**MediaCrop** is a modern, lightweight, web-based utility that removes the guesswork from cropping media using **FFmpeg**. It provides a clean, visual interface to obtain precise crop coordinates for any video, image, or audio file. Simply drag, resize, and instantly get your perfect FFmpeg crop string.
+**MediaCrop** is a modern, lightweight, web-based utility that eliminates the guesswork from cropping media using **FFmpeg**. It offers a clean, intuitive visual interface to obtain precise crop coordinates for any video, image, or audio file. Simply drag, resize, or type in coordinates to instantly generate your perfect FFmpeg crop string.
 
-The tool launches a local web server, opening a sleek, responsive browser interface complete with **Light & Dark themes** for a fast, enjoyable, and efficient experience.
+The tool launches a local web server and automatically opens a sleek, responsive browser interface, complete with **Light & Dark themes**, ensuring a fast, enjoyable, and efficient experience tailored to your preferences.
 
 ---
 
 ## 📖 The Story Behind MediaCrop
 
-Working with **FFmpeg** offers immense power, but it's rarely intuitive—especially when it comes to identifying accurate **crop coordinates**. Traditionally, this involved a tedious cycle of:
+Working with **FFmpeg** provides immense power, but it is rarely intuitive—especially when identifying accurate **crop coordinates**. Traditionally, this process involved a tedious, repetitive cycle:
 
 1. Opening the file in a media player.
-2. Estimating coordinates by sight.
-3. Running the FFmpeg command.
-4. Checking the result and repeating the process.
+2. Estimating coordinates visually by trial and error.
+3. Running the FFmpeg command to test the crop.
+4. Reviewing the result and iterating on the coordinates.
 
-This endless loop wasted valuable time and energy. **MediaCrop** was conceived to end this frustration—a **visual, drag-and-drop solution** that instantly provides command-line-ready FFmpeg filter strings. No trial and error. No stress. Just **precision made effortless**.
+This endless loop consumed valuable time and energy. **MediaCrop** was created to break this cycle, offering a **visual, drag-and-drop, and type-in solution** that delivers command-line-ready FFmpeg filter strings instantly. No more trial and error. No more frustration. Just **precision made effortless**.
 
 ---
 
 ## ✨ Key Features
 
-| Category            | Feature                           | Description                                                                                                                      |
-| :------------------ | :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------- |
-| **Interface & UX**  | 🌌 **Light & Dark Themes**        | Switch effortlessly between themes, automatically saved in your browser.                                                         |
-|                     | 🖼️ **Floating Live Preview**     | Real-time preview of the cropped area in a movable, resizable window with 8 handles. Supports pinch-to-zoom and fullscreen mode. |
-|                     | 📱 **Responsive Design**          | Automatically adapts to all screens—desktop, tablet, and mobile.                                                                 |
-|                     | 🔎 **Media Zoom**                 | Zoom in/out precisely using mouse wheel or pinch gestures.                                                                       |
-|                     | 🖐️ **Advanced Touch Support**    | Seamless touch gestures for resizing, dragging, and zooming.                                                                     |
-|                     | 🕹️ **Interactive Crop Box**      | Move and resize with 8 directional handles (N, S, E, W, NW, NE, SW, SE).                                                         |
-| **Media Handling**  | ⏯️ **Full Video Controls**        | Includes play/pause, seek bar, playback speed, time display, and volume/mute controls.                                           |
-|                     | 🎵 **Broad Format Support**       | Preview a wide range of image, video, and audio formats, with fallbacks for unsupported files.                                   |
-| **Precision Tools** | 📊 **Aspect Ratio Presets**       | Choose standard ratios like *16:9, 4:3, 9:16, 1:1, 21:9* or enter a custom ratio.                                                |
-|                     | 📊 **Real-Time Info Panel**       | Displays live resolution, crop size, coordinates, aspect ratio, and zoom level.                                                  |
-|                     | ⌨️ **Keyboard Controls**          | Nudge with Arrow Keys (10px) or fine-tune with Shift + Arrow Keys (1px).                                                         |
-| **Usability**       | 🔧 **Quick Tools & Context Menu** | Instantly center, toggle grid, or reset via sidebar or right-click menu.                                                         |
-| **System**          | ⚙️ **Zero Dependencies**          | Runs entirely on Python’s standard library—no installs, no pain.                                                                 |
-|                     | 🔌 **Smart Port Detection**       | Auto-selects a new port if the default (8000) is busy.                                                                           |
-|                     | 💻 **Cross-Platform**             | Fully compatible with Windows, macOS, and Linux.                                                                                 |
+| Category          | Feature                          | Description                                                                 |
+|-------------------|----------------------------------|-----------------------------------------------------------------------------|
+| **Interface & UX** | 🌌 **Light & Dark Themes**       | Switch seamlessly between themes, with preferences automatically saved in your browser. |
+|                   | 🖼️ **Resizable Live Preview**    | Real-time preview in a floating window that is movable, resizable via 8 handles, and supports pinch-to-zoom gestures. |
+|                   | 📱 **Responsive Design**         | Automatically adapts to all screen sizes—desktop, tablet, and mobile devices. |
+|                   | 🖐️ **Native Touch Experience**   | Advanced touch gestures for resizing, dragging, and zooming, with disabled browser context menus for an immersive, app-like feel. |
+|                   | 🔔 **Custom Notifications**      | Clean, modern notifications appear on save actions, replacing intrusive browser alerts. |
+| **Media Handling**| ⏯️ **Full Video Controls**       | Comprehensive controls including play/pause, seek bar, playback speed adjustment, time display, and volume/mute options. |
+|                   | 🎵 **Broad Format Support**      | Previews a wide range of image, video, and audio formats, with graceful fallbacks for unsupported files. |
+| **Precision Tools**| 📊 **Bi-directional Info Panel** | Displays and accepts coordinates; type exact 'Preview' (scaled) or 'Actual' (native) values for pixel-perfect precision. |
+|                   | 📐 **Aspect Ratio Presets**      | Select standard ratios like *16:9, 4:3, 9:16, 1:1* or input a custom ratio. |
+|                   | 🔒 **Keep Aspect Ratio Toggle**  | Dedicated checkbox to lock the crop box's aspect ratio during resizing. |
+|                   | 🔎 **Media Zoom**                | Zoom in/out precisely using the mouse wheel or pinch gestures directly on the media. |
+|                   | ⌨️ **Keyboard Controls**         | Nudge the crop box with Arrow Keys (10px steps) or fine-tune with Shift + Arrow Keys (1px steps). |
+|                   | 🔧 **Quick Tools & Context Menu**| Instantly center, toggle grid, or reset via the sidebar or right-click context menu. |
+| **System**        | ⚙️ **Zero Dependencies**         | Runs entirely on Python’s standard library—no additional installations required. |
+|                   | 🔌 **Smart Port Detection**      | Automatically selects an available port if the default (8000) is occupied. |
+|                   | 💻 **Advanced Cross-Platform**   | Fully compatible with Windows, macOS, and Linux, including explicit auto-open support for Termux and WSL environments. |
+|                   | 🛡️ **Robust CLI**                | Powered by `argparse` for standardized, reliable command-line help (`-h`) and version (`--version`) flags. |
 
 ---
 
@@ -66,7 +68,7 @@ A modern interface available in both light and dark themes, optimized for every 
 
 **MediaCrop** computes coordinates for **any file readable by FFmpeg**, with native in-browser previews for:
 
-* **Images:** JPG, PNG, WEBP, AVIF, GIF, BMP, SVG, ICO, HEIC, TIFF
+* **Images:** JPG, PNG, WEBP, AVIF, GIF, BMP, SVG, ICO, HEIC, TIFF, JXL
 * **Videos:** MP4, WEBM, MOV, OGV
 * **Audio:** MP3, WAV, FLAC, OGG, M4A, AAC, OPUS
 
@@ -105,30 +107,28 @@ Run the command below in your terminal:
 mediacrop "/path/to/your/mediafile.mp4"
 ```
 
-> **Note:** Always enclose file paths with spaces in quotes.
-
-* The tool automatically launches in your default browser at [http://127.0.0.1:8000](http://127.0.0.1:8000).
-* Adjust the crop box visually, apply aspect ratios, or toggle the grid overlay.
-* Click **💾 Save Coordinates** to confirm.
-
-  * The FFmpeg crop string appears in your terminal.
-  * Press **Ctrl + C** in the terminal to stop the server.
-
----
+> **Note:** Always enclose file paths containing spaces in quotes.
+> 
+> * The tool automatically launches in your default browser at `http://127.0.0.1:8000`.
+> * Adjust the crop box visually, apply aspect ratios, or type exact coordinates into the sidebar.
+> * Click 💾 **Save Coordinates** to confirm.
+>   * The FFmpeg crop string appears in your terminal.
+>   * Press `Ctrl + C` in the terminal to stop the server.
 
 ### 🕹️ Command-Line Options
 
-| Option                        | Description                                   |
-| :---------------------------- | :-------------------------------------------- |
-| `-p <port>` / `--port <port>` | Specify a custom server port (default: 8000). |
-| `-v` / `--verbose`            | Enable detailed logs for debugging.           |
-| `-h` / `--help`               | Display help message and exit.                |
+| Option            | Alias     | Description                                                                 |
+|-------------------|-----------|-----------------------------------------------------------------------------|
+| `media_file`      |           | Path to the video or image file. (Required)                                 |
+| `--port <port>`   | `-p <port>` | Specify a custom server port (default: 8000).                               |
+| `--host <host>`   |           | Specify a host address (default: 127.0.0.1).                                |
+| `--verbose`       | `-v`      | Enable detailed logs for debugging.                                         |
+| `--version`       |           | Show program's version number and exit.                                     |
+| `--help`          | `-h`      | Show this help message and exit.                                            |
 
----
+### 🎬 Using the Output with FFmpeg
 
-## 🎬 Using the Output with FFmpeg
-
-MediaCrop produces a command-line-ready crop filter string:
+MediaCrop produces a command-line-ready crop filter string, such as:
 
 ```
 crop=1280:720:320:180
@@ -144,18 +144,20 @@ ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output_cropped.mp4
 
 ## ⌨️ Controls & Shortcuts
 
-| Action             | Control                            |
-| :----------------- | :--------------------------------- |
-| Move Crop Box      | Click + Drag / Arrow Keys          |
-| Fine Move (1px)    | Shift + Arrow Keys                 |
-| Resize Crop Box    | Drag Edges/Corners / Pinch (Touch) |
-| Zoom Media View    | Mouse Wheel / Pinch (Touch)        |
-| Toggle Grid        | G Key                              |
-| Center Crop Box    | C Key                              |
-| Save Coordinates   | Enter Key                          |
-| Toggle Help Panel  | ? Key / Esc to Close               |
-| Access Quick Tools | Right-Click on Crop Box            |
-| Fullscreen Preview | Long-Press on Live Preview Window  |
+| Action                  | Control                          |
+|-------------------------|----------------------------------|
+| Move Crop Box           | Click + Drag / Arrow Keys        |
+| Fine Move (1px)         | Shift + Arrow Keys               |
+| Resize Crop Box         | Drag Edges/Corners / Pinch (Touch) |
+| Set Coordinates Manually| Type values into 'Preview' or 'Actual' sidebar inputs. |
+| Zoom Media View         | Mouse Wheel / Pinch (Touch) on media |
+| Resize Preview Window   | Drag 8 handles on preview / Pinch (Touch) on preview |
+| Fullscreen Preview      | Long-Press on Live Preview Window |
+| Toggle Grid             | G Key                            |
+| Center Crop Box         | C Key                            |
+| Save Coordinates        | Enter Key                        |
+| Toggle Help Panel       | ? Key / Esc to Close             |
+| Access Quick Tools      | Right-Click on Crop Box          |
 
 ---
 
@@ -165,31 +167,28 @@ Contributions are warmly welcomed! Whether you fix bugs, add features, or improv
 
 ### How to Contribute
 
-1. Fork this repository.
-2. Create a new branch for your update:
+* Fork this repository.
+* Create a new branch for your update:
+  ```bash
+  git checkout -b feature/your-feature-name
+  ```
+* Commit your changes with a clear, descriptive message.
+* Open a Pull Request.
 
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Commit with a clear, descriptive message.
-4. Open a Pull Request.
-
-If you find this project valuable, please **star ⭐ it on GitHub** to support future development!
+If you find this project valuable, please star ⭐ it on GitHub to support future development!
 
 ---
 
 ## 👨‍💻 Author
 
-**Name:** Mallik Mohammad Musaddiq
-
-**Email:** [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)
-
-**GitHub:** [mallikmusaddiq1](https://github.com/mallikmusaddiq1)
-
-**Project Repo:** [MediaCrop](https://github.com/mallikmusaddiq1/mediacrop)
+**Name:** Mallik Mohammad Musaddiq  
+**Email:** [mallikmusaddiq1@gmail.com](mailto:mallikmusaddiq1@gmail.com)  
+**GitHub:** [mallikmusaddiq1](https://github.com/mallikmusaddiq1)  
+**Project Repo:** [mallikmusaddiq1/mediacrop](https://github.com/mallikmusaddiq1/mediacrop)  
+**Instagram:** [@musaddiq.x7](https://instagram.com/musaddiq.x7)
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
