@@ -12,8 +12,7 @@ def get_javascript_code(media_type, ext):
       customRatio: document.getElementById("customRatio"),
       customW: document.getElementById("customW"),
       customH: document.getElementById("customH"),
-      positionInfo: document.getElementById("positionInfo"),
-      sizeInfo: document.getElementById("sizeInfo"),
+      keepAspect: document.getElementById("keepAspect"),
       ratioInfo: document.getElementById("ratioInfo"),
       naturalResInfo: document.getElementById("naturalResInfo"),
       zoomInfo: document.getElementById("zoomInfo"),
@@ -31,6 +30,14 @@ def get_javascript_code(media_type, ext):
       previewHeader: document.querySelector(".preview-header"),
       previewSizeInfo: document.getElementById("previewSizeInfo"),
       previewCloseBtn: document.getElementById("previewCloseBtn"),
+      previewX: document.getElementById("previewX"),
+      previewY: document.getElementById("previewY"),
+      previewW: document.getElementById("previewW"),
+      previewH: document.getElementById("previewH"),
+      actualX: document.getElementById("actualX"),
+      actualY: document.getElementById("actualY"),
+      actualW: document.getElementById("actualW"),
+      actualH: document.getElementById("actualH"),
     }};
 
     const state = {{
@@ -49,6 +56,7 @@ def get_javascript_code(media_type, ext):
       naturalHeight: 0,
       aspectMode: "free",
       aspectRatio: null,
+      keepAspect: true,
       isInitialized: false,
       showGrid: false,
       isHelpVisible: false,
@@ -80,6 +88,7 @@ def get_javascript_code(media_type, ext):
       previewPinchInitialHeight: 0,
       holdTimer: null,
       isResizingPreview: false,
+      isUpdating: false,
     }};
     
     function initializeTheme() {{
@@ -495,14 +504,36 @@ def get_javascript_code(media_type, ext):
     }}
 
     function updateCropInfo() {{
-      if (!elements.crop) return;
+      if (!elements.crop || state.isUpdating) return;
+      
+      state.isUpdating = true; 
+
       const left = parseInt(elements.crop.style.left) || 0;
       const top = parseInt(elements.crop.style.top) || 0;
       const width = parseInt(elements.crop.style.width) || 0;
       const height = parseInt(elements.crop.style.height) || 0;
       
-      elements.positionInfo.textContent = `(${{left}}, ${{top}})`;
-      elements.sizeInfo.textContent = `${{width}}×${{height}}`;
+      elements.previewX.value = left;
+      elements.previewY.value = top;
+      elements.previewW.value = width;
+      elements.previewH.value = height;
+
+      let actualX = 0, actualY = 0, actualW = 0, actualH = 0;
+      if (state.naturalWidth && state.naturalHeight && state.mediaWidth && state.mediaHeight) {{
+        const scaleX = state.naturalWidth / state.mediaWidth;
+        const scaleY = state.naturalHeight / state.mediaHeight;
+        
+        actualX = Math.round(left * scaleX);
+        actualY = Math.round(top * scaleY);
+        actualW = Math.round(width * scaleX);
+        actualH = Math.round(height * scaleY);
+      }}
+      
+      elements.actualX.value = actualX;
+      elements.actualY.value = actualY;
+      elements.actualW.value = actualW;
+      elements.actualH.value = actualH;
+
       elements.zoomInfo.textContent = `${{Math.round(state.zoom * 100)}}%`;
       
       if (width && height) {{
@@ -526,6 +557,42 @@ def get_javascript_code(media_type, ext):
       if (state.mediaType === 'image' || (state.mediaType === 'video' && elements.media.paused)) {{
         updatePreview();
       }}
+      
+      state.isUpdating = false; 
+    }}
+
+    function handlePreviewInputChange(e) {{
+      if (state.isUpdating) return;
+      
+      let pX = parseInt(elements.previewX.value) || 0;
+      let pY = parseInt(elements.previewY.value) || 0;
+      let pW = parseInt(elements.previewW.value) || 0;
+      let pH = parseInt(elements.previewH.value) || 0;
+      
+      setCropDimensions(pX, pY, pW, pH);
+    }}
+
+    function handleActualInputChange(e) {{
+      if (state.isUpdating) return; 
+
+      if (!state.naturalWidth || !state.naturalHeight || !state.mediaWidth || !state.mediaHeight) return;
+
+      let aX = parseInt(elements.actualX.value) || 0;
+      let aY = parseInt(elements.actualY.value) || 0;
+      let aW = parseInt(elements.actualW.value) || 0;
+      let aH = parseInt(elements.actualH.value) || 0;
+
+      const scaleX = state.naturalWidth / state.mediaWidth;
+      const scaleY = state.naturalHeight / state.mediaHeight;
+
+      if (scaleX === 0 || scaleY === 0) return;
+
+      const pX = aX / scaleX;
+      const pY = aY / scaleY;
+      const pW = aW / scaleX;
+      const pH = aH / scaleY;
+
+      setCropDimensions(pX, pY, pW, pH);
     }}
 
     function setMediaZoom(newZoom) {{
@@ -676,7 +743,7 @@ def get_javascript_code(media_type, ext):
             newHeight = startCropHeight - deltaY;
         }}
 
-        if (aspectRatio && aspectMode !== "free") {{
+        if (state.keepAspect && aspectRatio && aspectMode !== "free") {{
             const isHorizontalHandle = resizeDirection.includes('e') || resizeDirection.includes('w');
             const isVerticalHandle = resizeDirection.includes('n') || resizeDirection.includes('s');
 
@@ -776,23 +843,32 @@ def get_javascript_code(media_type, ext):
       e.preventDefault();
       
       const newDist = utils.getDistance(e.touches[0], e.touches[1]);
+      if (state.pinchInitialDist === 0) return;
       const factor = newDist / state.pinchInitialDist;
       
       if (state.pinchType === 'crop') {{
         let newWidth = state.pinchInitialWidth * factor;
         let newHeight = state.pinchInitialHeight * factor;
         
-        const dims = applyAspectRatio(newWidth, newHeight);
-        newWidth = dims.width;
-        newHeight = dims.height;
-        
+        if (state.keepAspect && state.aspectRatio && state.aspectMode !== 'free') {{
+             const ratio = state.aspectRatio;
+            const currentRatio = newWidth / newHeight;
+            if (Math.abs(currentRatio - ratio) > 0.01) {{
+                 if (Math.abs(newWidth - state.pinchInitialWidth) > Math.abs(newHeight - state.pinchInitialHeight) * ratio) {{
+                    newHeight = newWidth / ratio;
+                }} else {{
+                    newWidth = newHeight * ratio;
+                }}
+            }}
+        }}
+
         const deltaW = newWidth - state.pinchInitialWidth;
         const deltaH = newHeight - state.pinchInitialHeight;
         const newLeft = state.pinchInitialLeft - deltaW / 2;
         const newTop = state.pinchInitialTop - deltaH / 2;
         
         setCropDimensions(newLeft, newTop, newWidth, newHeight);
-      }} else {{
+      }} else {{ 
         const newZoom = state.pinchInitialZoom * factor;
         const oldZoom = state.zoom;
         setMediaZoom(newZoom);
@@ -800,10 +876,17 @@ def get_javascript_code(media_type, ext):
         const newFactor = newZoom / oldZoom;
         const viewer = elements.mediaViewer;
         
-        viewer.scrollLeft = state.pinchInitialScrollLeft * newFactor + state.pinchInitialRelX * (newFactor - 1);
-        viewer.scrollTop = state.pinchInitialScrollTop * newFactor + state.pinchInitialRelY * (newFactor - 1);
+        const contentX = state.pinchInitialScrollLeft + state.pinchInitialRelX;
+        const contentY = state.pinchInitialScrollTop + state.pinchInitialRelY;
+        
+        const newContentX = contentX * newFactor;
+        const newContentY = contentY * newFactor;
+        
+        viewer.scrollLeft = newContentX - state.pinchInitialRelX;
+        viewer.scrollTop = newContentY - state.pinchInitialRelY;
       }}
     }}
+
 
     function handlePinchEnd() {{
       state.isPinching = false;
@@ -867,21 +950,22 @@ def get_javascript_code(media_type, ext):
         viewer.scrollLeft += dx;
         viewer.scrollTop += dy;
         
-        state.startMouseX -= dx;
-        state.startMouseY -= dy;
-        
         if (state.isDragging || state.isResizing) {{
-            const fakeEvent = {{ clientX: state.mouseX, clientY: state.mouseY }};
-            if (state.isDragging) {{
-                dragHandlers.move(fakeEvent);
-            }} else if (state.isResizing) {{
-                resizeHandlers.move(fakeEvent);
-            }}
+           state.startMouseX -= dx;
+           state.startMouseY -= dy;
+        
+           const fakeEvent = {{ clientX: state.mouseX, clientY: state.mouseY, preventDefault: () => {{}} }}; 
+           if (state.isDragging) {{
+               dragHandlers.move(fakeEvent);
+           }} else if (state.isResizing) {{
+               resizeHandlers.move(fakeEvent);
+           }}
         }}
       }}
       
       requestAnimationFrame(autoScrollLoop);
     }}
+
 
     function handleKeyboard(e) {{
       if (state.isHelpVisible && e.key === 'Escape') {{
@@ -893,6 +977,8 @@ def get_javascript_code(media_type, ext):
           closePreviewFullscreen();
           return;
       }}
+      
+      if (e.target.tagName === 'INPUT') return;
       
       if (state.isHelpVisible || state.mediaType === 'audio' || !elements.crop) return;
       
@@ -928,7 +1014,8 @@ def get_javascript_code(media_type, ext):
           e.preventDefault(); toggleGrid(); break;
         case 'Enter':
           if (document.activeElement === elements.crop) {{
-            e.preventDefault(); saveCrop();
+            e.preventDefault(); 
+            saveCrop();
           }}
           break;
         default: return;
@@ -943,16 +1030,16 @@ def get_javascript_code(media_type, ext):
         
         const scrollMargin = 50;
         
-        if (cropRect.left < viewerRect.left + scrollMargin) {{
-            viewer.scrollLeft -= step;
-        }} else if (cropRect.right > viewerRect.right - scrollMargin) {{
-            viewer.scrollLeft += step;
+        if (cropRect.left < viewerRect.left + scrollMargin && viewer.scrollLeft > 0) {{
+            viewer.scrollLeft -= step * 2;
+        }} else if (cropRect.right > viewerRect.right - scrollMargin && viewer.scrollLeft < viewer.scrollWidth - viewer.clientWidth) {{
+            viewer.scrollLeft += step * 2;
         }}
         
-        if (cropRect.top < viewerRect.top + scrollMargin) {{
-            viewer.scrollTop -= step;
-        }} else if (cropRect.bottom > viewerRect.bottom - scrollMargin) {{
-            viewer.scrollTop += step;
+        if (cropRect.top < viewerRect.top + scrollMargin && viewer.scrollTop > 0) {{
+            viewer.scrollTop -= step * 2;
+        }} else if (cropRect.bottom > viewerRect.bottom - scrollMargin && viewer.scrollTop < viewer.scrollHeight - viewer.clientHeight) {{
+            viewer.scrollTop += step * 2;
         }}
       }}
     }}
@@ -973,26 +1060,35 @@ def get_javascript_code(media_type, ext):
       
       setCropDimensions(centerX, centerY, currentWidth, currentHeight, true);
 
-      const viewer = document.querySelector('.media-viewer'); 
-      viewer.scrollLeft = centerX + (currentWidth / 2) - (viewer.clientWidth / 2);
-      viewer.scrollTop = centerY + (currentHeight / 2) - (viewer.clientHeight / 2);
+      const viewer = elements.mediaViewer;
+      const targetScrollLeft = centerX + currentWidth / 2 - viewer.clientWidth / 2;
+      const targetScrollTop = centerY + currentHeight / 2 - viewer.clientHeight / 2;
+      
+      viewer.scrollTo({{
+          left: targetScrollLeft,
+          top: targetScrollTop,
+          behavior: 'smooth' 
+      }});
     }}
 
     function resetCropSize() {{
       if (state.mediaType === 'audio' || !elements.crop) return;
       setMediaZoom(1);
-      positionCropBox();
+      positionCropBox(); 
       elements.aspectSelect.value = "free";
       state.aspectMode = "free";
       state.aspectRatio = null;
       elements.customRatio.classList.remove('visible');
+      
+      elements.keepAspect.checked = true;
+      state.keepAspect = true;
     }}
 
     function toggleHelp() {{
       state.isHelpVisible = !state.isHelpVisible;
       elements.helpModal.style.display = state.isHelpVisible ? 'flex' : 'none';
       if (!state.isHelpVisible && elements.crop) {{
-        elements.crop.focus();
+        elements.crop.focus(); 
       }}
     }}
 
@@ -1001,24 +1097,43 @@ def get_javascript_code(media_type, ext):
       e.preventDefault();
       const menu = elements.contextMenu;
       menu.style.display = 'block';
+      
+      const menuWidth = menu.offsetWidth;
+      const menuHeight = menu.offsetHeight;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
       let left = e.clientX;
       let top = e.clientY;
-      if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 10;
-      if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 10;
+      
+      if (left + menuWidth > viewportWidth - 10) {{
+          left = viewportWidth - menuWidth - 10;
+      }}
+      if (top + menuHeight > viewportHeight - 10) {{
+          top = viewportHeight - menuHeight - 10;
+      }}
+      left = Math.max(10, left);
+      top = Math.max(10, top); 
       
       menu.style.left = left + 'px';
       menu.style.top = top + 'px';
       
-      document.addEventListener('click', hideContextMenu, {{ once: true }});
+      document.addEventListener('click', hideContextMenu, {{ once: true, capture: true }});
     }}
 
-    function hideContextMenu() {{
+    function hideContextMenu(e) {{
+      if (elements.contextMenu && elements.contextMenu.contains(e?.target)) {{
+           if (!e?.target.classList.contains('context-item')) {{
+               document.addEventListener('click', hideContextMenu, {{ once: true, capture: true }});
+           }}
+           return; 
+      }}
       if (elements.contextMenu) {{
         elements.contextMenu.style.display = 'none';
       }}
     }}
 
-    function handleAspectRatioChange(e) {{
+     function handleAspectRatioChange(e) {{
       state.aspectMode = e.target.value;
       
       if (state.aspectMode === "custom") {{
@@ -1029,33 +1144,42 @@ def get_javascript_code(media_type, ext):
         
         if (state.aspectMode === "free") {{
           state.aspectRatio = null;
-        }} else if (state.aspectMode === "original") {{
-          if (state.naturalWidth && state.naturalHeight) {{
-            state.aspectRatio = state.naturalWidth / state.naturalHeight;
-          }} else {{
-            state.aspectRatio = null;
-          }}
-        }} else {{
-          const parts = state.aspectMode.split(":");
-          state.aspectRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
+        }} else {{ 
+            if (state.aspectMode === "original") {{
+              if (state.naturalWidth && state.naturalHeight && state.naturalHeight !== 0) {{
+                state.aspectRatio = state.naturalWidth / state.naturalHeight;
+              }} else {{
+                state.aspectRatio = null;
+              }}
+            }} else {{
+              const parts = state.aspectMode.split(":");
+              if (parts.length === 2 && parseFloat(parts[1]) !== 0) {{
+                 state.aspectRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
+              }} else {{
+                 state.aspectRatio = null;
+              }}
+            }}
+            if (state.keepAspect) {{
+                applyCurrentAspectRatio();
+            }}
         }}
-        applyCurrentAspectRatio();
       }}
+      updateCropInfo(); 
     }}
 
     function updateCustomAspectRatio() {{
       const w = parseFloat(elements.customW.value);
       const h = parseFloat(elements.customH.value);
       
-      if (isNaN(w) || isNaN(h) || h === 0) {{
+      if (!isNaN(w) && !isNaN(h) && h !== 0 && w > 0 && h > 0) {{
+          state.aspectRatio = w / h;
+          if (state.aspectMode === "custom" && state.keepAspect) {{
+            applyCurrentAspectRatio();
+          }}
+      }} else {{
           state.aspectRatio = null;
-          return;
       }}
-      
-      state.aspectRatio = w / h;
-      if (state.aspectMode === "custom") {{
-        applyCurrentAspectRatio();
-      }}
+      updateCropInfo();
     }}
 
     function applyCurrentAspectRatio() {{
@@ -1064,16 +1188,17 @@ def get_javascript_code(media_type, ext):
       const currentLeft = parseFloat(elements.crop.style.left) || 0;
       const currentTop = parseFloat(elements.crop.style.top) || 0;
       const currentWidth = parseFloat(elements.crop.style.width) || 0;
-      
-      const newHeight = Math.round(currentWidth / state.aspectRatio);
-      
-      if (newHeight > 30 && newHeight <= state.mediaHeight) {{
-        setCropDimensions(currentLeft, currentTop, currentWidth, newHeight, true);
-      }} else {{
-        const currentHeight = parseFloat(elements.crop.style.height) || 0;
-        const newWidth = Math.round(currentHeight * state.aspectRatio);
-        setCropDimensions(currentLeft, currentTop, newWidth, currentHeight, true);
+      const currentHeight = parseFloat(elements.crop.style.height) || 0;
+
+      let newWidth = currentWidth;
+      let newHeight = Math.round(currentWidth / state.aspectRatio);
+
+      if (newHeight < 30 || newHeight > state.mediaHeight) {{
+          newHeight = currentHeight;
+          newWidth = Math.round(currentHeight * state.aspectRatio);
       }}
+        
+      setCropDimensions(currentLeft, currentTop, newWidth, newHeight, true);
     }}
 
     function saveCrop() {{
@@ -1084,66 +1209,94 @@ def get_javascript_code(media_type, ext):
       
       updateMediaDimensions();
       
-      const left = parseFloat(elements.crop.style.left) || 0;
-      const top = parseFloat(elements.crop.style.top) || 0;
-      const width = parseFloat(elements.crop.style.width) || 0;
-      const height = parseFloat(elements.crop.style.height) || 0;
+      const finalX = parseInt(elements.actualX.value) || 0;
+      const finalY = parseInt(elements.actualY.value) || 0;
+      const finalW = parseInt(elements.actualW.value) || 0;
+      const finalH = parseInt(elements.actualH.value) || 0;
       
-      let scaleX = 1, scaleY = 1;
-      
-      if (state.naturalWidth && state.naturalHeight && state.mediaWidth && state.mediaHeight) {{
-        scaleX = state.naturalWidth / state.mediaWidth;
-        scaleY = state.naturalHeight / state.mediaHeight;
+      if (finalW <= 0 || finalH <= 0) {{
+          alert("Invalid crop dimensions (Width and Height must be positive).");
+          return;
       }}
-      
-      const finalX = Math.round(left * scaleX);
-      const finalY = Math.round(top * scaleY);
-      const finalW = Math.round(width * scaleX);
-      const finalH = Math.round(height * scaleY);
-      
+       if (finalX < 0 || finalY < 0) {{
+           alert("Invalid crop position (X and Y cannot be negative).");
+           return;
+       }}
+       if (state.naturalWidth && state.naturalHeight) {{
+           if (finalX + finalW > state.naturalWidth || finalY + finalH > state.naturalHeight) {{
+               console.warn("Calculated crop exceeds natural media dimensions. Clamping might occur in FFmpeg.");
+           }}
+       }}
+
       fetch("/save", {{
         method: "POST",
         headers: {{ "Content-Type": "application/json" }},
         body: JSON.stringify({{ 
           x: finalX, y: finalY, w: finalW, h: finalH,
-          scaleX: scaleX, scaleY: scaleY, mediaType: state.mediaType
+          mediaType: state.mediaType
         }})
       }})
       .then(response => {{
         if (response.ok) {{
+          return response.json();
+        }} else {{
+          return response.json().then(data => {{
+              throw new Error(data.message || `Server responded with status: ${{response.status}}`);
+          }}).catch(() => {{
+              throw new Error(`Server responded with status: ${{response.status}}`);
+          }});
+        }}
+      }})
+      .then(data => {{
+          console.log("Save successful:", data);
           const notification = document.createElement('div');
           notification.className = 'notification';
           notification.innerHTML = `
             <div class="notification-title">Crop Saved Successfully!</div>
-            <div class="notification-code">crop=${{finalW}}:${{finalH}}:${{finalX}}:${{finalY}}</div>
+            <div class="notification-code">${{data.crop_filter || `crop=${{finalW}}:${{finalH}}:${{finalX}}:${{finalY}}`}}</div>
             <div class="notification-subtitle">FFmpeg command printed to terminal.</div>
           `;
           document.body.appendChild(notification);
-          setTimeout(() => document.body.removeChild(notification), 3000);
-        }} else {{
-          response.json().then(data => alert("Error: " + (data.message || "Could not save crop parameters"))).catch(() => alert("Error: Could not save crop parameters"));
-        }}
+          setTimeout(() => {{
+              if (document.body.contains(notification)) {{
+                  document.body.removeChild(notification);
+              }}
+          }}, 3000);
       }})
       .catch(error => {{
-        alert("Network Error: " + error.message);
+        console.error("Save failed:", error);
+        alert("Error saving crop parameters: " + error.message);
       }});
     }}
 
     const handleWindowResize = utils.debounce(() => {{
       if (!state.isInitialized) return;
       
-      updateMediaDimensions();
-      updateCropInfo();
+      const currentActualW = parseInt(elements.actualW.value) || 0;
+      const currentActualH = parseInt(elements.actualH.value) || 0;
+      const currentActualX = parseInt(elements.actualX.value) || 0;
+      const currentActualY = parseInt(elements.actualY.value) || 0;
       
-      if (elements.crop) {{
-        const left = parseFloat(elements.crop.style.left) || 0;
-        const top = parseFloat(elements.crop.style.top) || 0;
-        const width = parseFloat(elements.crop.style.width) || 0;
-        const height = parseFloat(elements.crop.style.height) || 0;
-        
-        setCropDimensions(left, top, width, height, true);
+      updateMediaDimensions();
+      
+      if (state.naturalWidth && state.naturalHeight && state.mediaWidth && state.mediaHeight) {{
+          const scaleX = state.naturalWidth / state.mediaWidth;
+          const scaleY = state.naturalHeight / state.mediaHeight;
+          if (scaleX > 0 && scaleY > 0) {{
+            const newPreviewW = Math.round(currentActualW / scaleX);
+            const newPreviewH = Math.round(currentActualH / scaleY);
+            const newPreviewX = Math.round(currentActualX / scaleX);
+            const newPreviewY = Math.round(currentActualY / scaleY);
+            setCropDimensions(newPreviewX, newPreviewY, newPreviewW, newPreviewH); 
+          }} else {{
+              positionCropBox();
+          }}
+      }} else {{
+          positionCropBox();
       }}
+
     }}, 200);
+
 
     function openPreviewFullscreen() {{
         if (!elements.floatingPreview.classList.contains('fullscreen')) {{
@@ -1157,7 +1310,6 @@ def get_javascript_code(media_type, ext):
         }}
     }}
     
-    // --- Floating Preview Handlers ---
     const previewInteraction = {{
         isDragging: false,
         hasDragged: false,
@@ -1165,12 +1317,15 @@ def get_javascript_code(media_type, ext):
         previewStartX: 0, previewStartY: 0,
         
         onMouseDown(e) {{
-            e.preventDefault();
+            if (e.button !== 0 && e.type === 'mousedown') return; 
+            
+            e.preventDefault(); 
             this.isDragging = true;
-            this.hasDragged = false;
+            this.hasDragged = false; 
             const coords = utils.getEventCoords(e);
             this.dragStartX = coords.x;
             this.dragStartY = coords.y;
+            
             const rect = elements.floatingPreview.getBoundingClientRect();
             this.previewStartX = rect.left;
             this.previewStartY = rect.top;
@@ -1179,7 +1334,7 @@ def get_javascript_code(media_type, ext):
             elements.floatingPreview.style.top = this.previewStartY + 'px';
             elements.floatingPreview.style.right = 'auto';
             elements.floatingPreview.style.bottom = 'auto';
-            elements.floatingPreview.style.transition = 'none';
+            elements.floatingPreview.style.transition = 'none'; 
 
             document.addEventListener('mousemove', this.onMouseMove);
             document.addEventListener('mouseup', this.onMouseUp);
@@ -1189,6 +1344,9 @@ def get_javascript_code(media_type, ext):
 
         onMouseMove(e) {{
             if (!previewInteraction.isDragging) return;
+            
+            if (e.type === 'touchmove') e.preventDefault(); 
+            
             const coords = utils.getEventCoords(e);
             const dx = coords.x - previewInteraction.dragStartX;
             const dy = coords.y - previewInteraction.dragStartY;
@@ -1200,17 +1358,21 @@ def get_javascript_code(media_type, ext):
 
             let newLeft = previewInteraction.previewStartX + dx;
             let newTop = previewInteraction.previewStartY + dy;
+            
             const previewWidth = elements.floatingPreview.offsetWidth;
             const previewHeight = elements.floatingPreview.offsetHeight;
             newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - previewWidth));
             newTop = Math.max(0, Math.min(newTop, window.innerHeight - previewHeight));
+            
             elements.floatingPreview.style.left = newLeft + 'px';
             elements.floatingPreview.style.top = newTop + 'px';
         }},
 
         onMouseUp() {{
+            if (!this.isDragging) return;
             this.isDragging = false;
             elements.floatingPreview.style.transition = '';
+            
             document.removeEventListener('mousemove', this.onMouseMove);
             document.removeEventListener('mouseup', this.onMouseUp);
             document.removeEventListener('touchmove', this.onMouseMove);
@@ -1218,18 +1380,28 @@ def get_javascript_code(media_type, ext):
         }},
 
         onContentMouseDown(e) {{
+            if (e.button !== 0 && e.type === 'mousedown') return;
+            if (e.touches && e.touches.length > 1) return; 
+            
             if (e.target.classList.contains('preview-resize-handle')) return;
+            
+             if(state.holdTimer) clearTimeout(state.holdTimer);
+             
+            this.hasDragged = false;
+            
             state.holdTimer = setTimeout(() => {{
-                if (!this.hasDragged) openPreviewFullscreen();
+                if (!this.hasDragged) {{ 
+                    openPreviewFullscreen();
+                }}
             }}, 700);
         }},
         
         onContentMouseUp(e) {{
             if(state.holdTimer) clearTimeout(state.holdTimer);
-            if (!this.hasDragged && e.type !== 'touchend') {{ // Avoid double toggle on touch
-                // elements.floatingPreview.classList.toggle('enlarged');
+            
+            if (!this.hasDragged && e.type !== 'touchend') {{ 
             }}
-            this.hasDragged = false;
+            this.hasDragged = false; 
         }},
         
         bind(element, handler) {{
@@ -1244,6 +1416,8 @@ def get_javascript_code(media_type, ext):
     
     const previewResizeHandlers = {{
         start(e) {{
+            if (e.button !== 0 && e.type === 'mousedown') return;
+            
             e.preventDefault();
             e.stopPropagation();
             if(state.holdTimer) clearTimeout(state.holdTimer);
@@ -1261,6 +1435,8 @@ def get_javascript_code(media_type, ext):
             state.startCropHeight = rect.height;
 
             elements.floatingPreview.style.transition = 'none';
+            elements.floatingPreview.style.left = state.startCropLeft + 'px';
+            elements.floatingPreview.style.top = state.startCropTop + 'px';
             elements.floatingPreview.style.right = 'auto';
             elements.floatingPreview.style.bottom = 'auto';
 
@@ -1272,7 +1448,9 @@ def get_javascript_code(media_type, ext):
         
         move(e) {{
             if (!state.isResizingPreview) return;
-            e.preventDefault();
+            
+            if (e.type === 'touchmove') e.preventDefault();
+            
             const coords = utils.getEventCoords(e);
             const deltaX = coords.x - state.startMouseX;
             const deltaY = coords.y - state.startMouseY;
@@ -1281,28 +1459,20 @@ def get_javascript_code(media_type, ext):
             let newTop = state.startCropTop;
             let newWidth = state.startCropWidth;
             let newHeight = state.startCropHeight;
+            const direction = state.resizeDirection;
 
-            if (state.resizeDirection.includes('e')) newWidth = state.startCropWidth + deltaX;
-            if (state.resizeDirection.includes('w')) {{
-                newWidth = state.startCropWidth - deltaX;
-                newLeft = state.startCropLeft + deltaX;
-            }}
-            if (state.resizeDirection.includes('s')) newHeight = state.startCropHeight + deltaY;
-            if (state.resizeDirection.includes('n')) {{
-                newHeight = state.startCropHeight - deltaY;
-                newTop = state.startCropTop + deltaY;
-            }}
+            if (direction.includes('e')) newWidth = state.startCropWidth + deltaX;
+            if (direction.includes('w')) newWidth = state.startCropWidth - deltaX;
+            if (direction.includes('s')) newHeight = state.startCropHeight + deltaY;
+            if (direction.includes('n')) newHeight = state.startCropHeight - deltaY;
 
             const minWidth = 150, minHeight = 120;
-            if (newWidth < minWidth) {{
-                if (state.resizeDirection.includes('w')) newLeft += newWidth - minWidth;
-                newWidth = minWidth;
-            }}
-            if (newHeight < minHeight) {{
-                if (state.resizeDirection.includes('n')) newTop += newHeight - minHeight;
-                newHeight = minHeight;
-            }}
+            if (newWidth < minWidth) newWidth = minWidth;
+            if (newHeight < minHeight) newHeight = minHeight;
             
+            if (direction.includes('w')) newLeft = state.startCropLeft + (state.startCropWidth - newWidth);
+            if (direction.includes('n')) newTop = state.startCropTop + (state.startCropHeight - newHeight);
+           
             elements.floatingPreview.style.left = newLeft + 'px';
             elements.floatingPreview.style.top = newTop + 'px';
             elements.floatingPreview.style.width = newWidth + 'px';
@@ -1310,8 +1480,10 @@ def get_javascript_code(media_type, ext):
         }},
         
         stop() {{
+            if (!state.isResizingPreview) return;
             state.isResizingPreview = false;
             elements.floatingPreview.style.transition = '';
+            
             document.removeEventListener('mousemove', this.move);
             document.removeEventListener('touchmove', this.move);
         }}
@@ -1320,16 +1492,19 @@ def get_javascript_code(media_type, ext):
     previewResizeHandlers.move = previewResizeHandlers.move.bind(previewResizeHandlers);
     previewResizeHandlers.stop = previewResizeHandlers.stop.bind(previewResizeHandlers);
     
-    // --- New Pinch Zoom Handlers for Floating Preview ---
     function startPreviewPinch(e) {{
         if (!e.touches || e.touches.length !== 2) return;
         e.preventDefault();
-        e.stopPropagation();
+        e.stopPropagation(); 
 
         if(state.holdTimer) clearTimeout(state.holdTimer);
 
         state.isPreviewPinching = true;
         state.previewPinchInitialDist = utils.getDistance(e.touches[0], e.touches[1]);
+        if (state.previewPinchInitialDist === 0) {{
+             state.isPreviewPinching = false;
+             return;
+        }}
 
         const rect = elements.floatingPreview.getBoundingClientRect();
         state.previewPinchInitialWidth = rect.width;
@@ -1338,7 +1513,7 @@ def get_javascript_code(media_type, ext):
         elements.floatingPreview.style.transition = 'none';
 
         document.addEventListener('touchmove', handlePreviewPinchMove, {{ passive: false }});
-        document.addEventListener('touchend', handlePreviewPinchEnd, {{ once: true }});
+        document.addEventListener('touchend', handlePreviewPinchEnd, {{ once: true }}); 
     }}
 
     function handlePreviewPinchMove(e) {{
@@ -1346,7 +1521,6 @@ def get_javascript_code(media_type, ext):
         e.preventDefault();
 
         const newDist = utils.getDistance(e.touches[0], e.touches[1]);
-        if (state.previewPinchInitialDist <= 0) return;
         const factor = newDist / state.previewPinchInitialDist;
 
         let newWidth = state.previewPinchInitialWidth * factor;
@@ -1368,7 +1542,7 @@ def get_javascript_code(media_type, ext):
         if (!state.isPreviewPinching) return;
         state.isPreviewPinching = false;
         elements.floatingPreview.style.transition = '';
-        document.removeEventListener('touchmove', handlePreviewPinchMove);
+        document.removeEventListener('touchmove', handlePreviewPinchMove); 
     }}
 
     function setupEventListeners() {{
@@ -1398,22 +1572,25 @@ def get_javascript_code(media_type, ext):
       elements.customW.addEventListener("input", utils.debounce(updateCustomAspectRatio, 300));
       elements.customH.addEventListener("input", utils.debounce(updateCustomAspectRatio, 300));
       
+      elements.keepAspect.addEventListener('change', (e) => {{
+          state.keepAspect = e.target.checked;
+          if (state.keepAspect) {{
+              applyCurrentAspectRatio();
+          }}
+      }});
+      
       document.addEventListener("keydown", handleKeyboard);
       
       window.addEventListener("resize", handleWindowResize);
       
       document.addEventListener("selectstart", e => {{
-        if (state.isDragging || state.isResizing || state.isResizingPreview || previewInteraction.isDragging || state.isPreviewPinching) e.preventDefault();
-      }});
-      
-      document.addEventListener("click", (e) => {{
-        if (elements.contextMenu && !elements.contextMenu.contains(e.target)) {{
-          hideContextMenu();
+        if (state.isDragging || state.isResizing || state.isResizingPreview || previewInteraction.isDragging || state.isPreviewPinching) {{
+            e.preventDefault();
         }}
       }});
-
+      
       elements.helpModal.addEventListener('click', (e) => {{
-        if (e.target === elements.helpModal) {{
+        if (e.target === elements.helpModal) {{ 
           toggleHelp();
         }}
       }});
@@ -1424,7 +1601,7 @@ def get_javascript_code(media_type, ext):
         
         const previewContentTouchStart = (e) => {{
             if (e.touches.length === 2) {{
-                startPreviewPinch(e);
+                startPreviewPinch(e); 
             }} else if (e.touches.length === 1) {{
                 previewInteraction.onContentMouseDown(e);
             }}
@@ -1442,6 +1619,30 @@ def get_javascript_code(media_type, ext):
         
         elements.previewCloseBtn.addEventListener('click', closePreviewFullscreen);
       }}
+
+      elements.previewX.addEventListener('change', handlePreviewInputChange);
+      elements.previewY.addEventListener('change', handlePreviewInputChange);
+      elements.previewW.addEventListener('change', handlePreviewInputChange);
+      elements.previewH.addEventListener('change', handlePreviewInputChange);
+
+      elements.actualX.addEventListener('change', handleActualInputChange);
+      elements.actualY.addEventListener('change', handleActualInputChange);
+      elements.actualW.addEventListener('change', handleActualInputChange);
+      elements.actualH.addEventListener('change', handleActualInputChange);
+
+      const inputs = [
+          elements.previewX, elements.previewY, elements.previewW, elements.previewH,
+          elements.actualX, elements.actualY, elements.actualW, elements.actualH,
+          elements.customW, elements.customH
+      ];
+      inputs.forEach(input => {{
+          input.addEventListener('keydown', (e) => {{
+              if (e.key === 'Enter') {{
+                  e.preventDefault();
+                  e.target.blur();
+              }}
+          }});
+      }});
     }}
 
     document.addEventListener("DOMContentLoaded", function() {{
@@ -1449,21 +1650,35 @@ def get_javascript_code(media_type, ext):
       setupEventListeners();
       
       if (elements.media) {{
-        if (elements.media.complete || elements.media.readyState >= 2) {{
-          initializeCrop();
-        }} else {{
-          elements.media.addEventListener('loadedmetadata', initializeCrop);
-          elements.media.addEventListener('canplay', initializeCrop);
-          elements.media.addEventListener('load', initializeCrop);
-          elements.media.addEventListener('error', () => {{
-            console.error("Media failed to load.");
-            hideLoading();
-          }});
-        }}
+          if ((elements.media.readyState >= 1 && (media_type === 'video' || media_type === 'audio')) || (elements.media.complete && media_type === 'image')) {{
+             console.log("Media already loaded or has metadata.");
+             initializeCrop();
+          }} else {{
+              console.log("Media not loaded yet, adding listeners.");
+              if (media_type === 'video' || media_type === 'audio') {{
+                  elements.media.addEventListener('loadedmetadata', initializeCrop, {{ once: true }});
+              }}
+              if (media_type === 'image') {{
+                 elements.media.addEventListener('load', initializeCrop, {{ once: true }});
+              }}
+              elements.media.addEventListener('canplay', initializeCrop, {{ once: true }});
+              elements.media.addEventListener('error', () => {{
+                console.error("Media failed to load.");
+                const errorElement = document.getElementById('unsupported') || elements.mediaWrapper;
+                if (errorElement) {{
+                    errorElement.innerHTML = '<div class="unsupported-content"><div class="unsupported-icon">⚠️</div><div class="unsupported-text">Error Loading Media</div><div class="unsupported-subtext">The file might be corrupt or inaccessible.</div></div>';
+                    elements.container.style.width = '500px'; 
+                    elements.container.style.height = '300px';
+                }}
+                hideLoading();
+              }}, {{ once: true }});
+          }}
+      }} else if (media_type === 'unsupported') {{
+          console.log("Unsupported media type, initializing with default box.");
+          setTimeout(initializeCrop, 50); 
       }} else {{
-        setTimeout(() => {{
-          initializeCrop();
-        }}, 100);
+         console.error("Media element not found and type is not 'unsupported'.");
+         hideLoading();
       }}
     }});
     """

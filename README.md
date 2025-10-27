@@ -57,8 +57,8 @@ This endless loop wasted valuable time and energy. **MediaCrop** was conceived t
 
 A modern interface available in both light and dark themes, optimized for every device.
 
-![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1836.png)
-![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1837.png)
+![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1968.png)
+![MediaCrop Desktop Screenshot](Screenshots/Screenshot-1080x1968-2.png)
 
 ---
 

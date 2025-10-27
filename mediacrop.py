@@ -18,7 +18,7 @@ from utils import get_file_info
 media_file = None
 verbose = False
 
-__version__ = "4.2.0"
+__version__ = "4.3.0"
 DEFAULT_PORT = 8000
 
 def port_type(value):

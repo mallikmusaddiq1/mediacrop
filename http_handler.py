@@ -59,15 +59,20 @@ class CropHandler(BaseHTTPRequestHandler):
     <input type="range" id="seekBar" class="seek-bar" min="0" max="100" value="0" step="any">
     <span id="duration">0:00</span>
   </div>
-  <select id="playbackSpeed" class="control-select" title="Playback Speed">
-    <option value="0.5">0.5x</option>
-    <option value="0.75">0.75x</option>
-    <option value="1" selected>1x</option>
-    <option value="1.25">1.25x</option>
-    <option value="1.5">1.5x</option>
-    <option value="1.75">1.75x</option>
-    <option value="2">2x</option>
-  </select>
+<select id="playbackSpeed" class="control-select" title="Playback Speed">
+  <option value="0.1">0.1x</option>
+  <option value="0.25">0.25x</option>
+  <option value="0.5">0.5x</option>
+  <option value="0.75">0.75x</option>
+  <option value="1" selected>1x (Normal)</option>
+  <option value="1.25">1.25x</option>
+  <option value="1.5">1.5x</option>
+  <option value="1.75">1.75x</option>
+  <option value="2">2x</option>
+  <option value="2.5">2.5x</option>
+  <option value="3">3x</option>
+  <option value="4">4x</option>
+</select>
   <div class="volume-container">
     <button id="muteBtn" class="control-btn" title="Mute/Unmute">🔊</button>
     <input type="range" id="volumeBar" class="volume-bar" min="0" max="100" value="100" step="1" title="Volume">
@@ -1171,6 +1176,126 @@ class CropHandler(BaseHTTPRequestHandler):
       white-space: nowrap;
       border: 0;
     }}
+    
+    /* START OF CSS FOR CROP INFO INPUTS */
+    .info-input-group {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }}
+
+    .info-input-wrapper {{
+      position: relative;
+    }}
+
+    .info-input-label {{
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-dim);
+      pointer-events: none;
+    }}
+
+    .info-input {{
+      width: 100%;
+      padding: 8px 10px 8px 30px; /* Make space for label */
+      background: var(--bg-control);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-main);
+      font-size: 12px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      text-align: right;
+      -moz-appearance: textfield; /* For Firefox */
+    }}
+
+    .info-input::-webkit-outer-spin-button,
+    .info-input::-webkit-inner-spin-button {{
+      -webkit-appearance: none;
+      margin: 0;
+    }}
+
+    .info-input:focus {{
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+    }}
+
+    .info-section-title {{
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 15px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+    }}
+    
+    .info-section-title:first-child {{
+        margin-top: 0;
+    }}
+    /* END OF CSS FOR CROP INFO INPUTS */
+
+    /* START: NEW CSS FOR CHECKBOX */
+    .checkbox-group {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+    }}
+
+    .form-label-checkbox {{
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      flex: 1;
+    }}
+
+    .form-checkbox {{
+      -webkit-appearance: none;
+      appearance: none;
+      background-color: var(--bg-control);
+      border: 1px solid var(--border);
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }}
+
+    .form-checkbox:checked {{
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }}
+
+    .form-checkbox:checked::before {{
+      content: '✔';
+      color: #000;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+    }}
+    
+    .light-theme .form-checkbox:checked::before {{
+        color: #fff;
+    }}
+
+    .form-checkbox:focus {{
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent);
+    }}
+    /* END: NEW CSS FOR CHECKBOX */
+
   </style>
 </head>
 <body class="dark-theme"> <div class="loading" id="loadingIndicator">
@@ -1227,7 +1352,12 @@ class CropHandler(BaseHTTPRequestHandler):
           <div class="ratio-separator">:</div>
           <input type="text" id="customH" class="form-input" value="9" placeholder="H" inputmode="numeric">
         </div>
-      </div>
+
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="keepAspect" class="form-checkbox" checked>
+          <label for="keepAspect" class="form-label-checkbox">Keep Aspect Ratio</label>
+        </div>
+        </div>
 
       <div class="sidebar-section">
         <div class="section-title tools">Quick Tools</div>
@@ -1251,30 +1381,71 @@ class CropHandler(BaseHTTPRequestHandler):
       <div class="sidebar-section">
         <div class="section-title info">Crop Info</div>
         
-        <div class="info-stats">
+        <div classs="info-stats">
           <div class="info-stat">
             <span class="info-stat-label">Natural Res:</span>
             <span class="info-stat-value" id="naturalResInfo">N/A</span>
           </div>
-          <div class="info-stat">
-            <span class="info-stat-label">Position:</span>
-            <span class="info-stat-value" id="positionInfo">(0, 0)</span>
+
+          <div class="info-section-title">Preview Info (Zoomed)</div>
+          
+          <div class="form-group info-input-group">
+            <div class="info-input-wrapper">
+              <span class="info-input-label">X</span>
+              <input type="number" id="previewX" class="info-input" value="0">
+            </div>
+            <div class="info-input-wrapper">
+              <span class="info-input-label">Y</span>
+              <input type="number" id="previewY" class="info-input" value="0">
+            </div>
           </div>
-          <div class="info-stat">
-            <span class="info-stat-label">Size:</span>
-            <span class="info-stat-value" id="sizeInfo">200×150</span>
+          <div class="form-group info-input-group">
+            <div class="info-input-wrapper">
+              <span class="info-input-label">W</span>
+              <input type="number" id="previewW" class="info-input" value="0">
+            </div>
+            <div class="info-input-wrapper">
+              <span class="info-input-label">H</span>
+              <input type="number" id="previewH" class="info-input" value="0">
+            </div>
           </div>
+
+          <div class="info-section-title">Actual Info (Original)</div>
+
+          <div class="form-group info-input-group">
+            <div class="info-input-wrapper">
+              <span class="info-input-label">X</span>
+              <input type="number" id="actualX" class="info-input" value="0">
+            </div>
+            <div class="info-input-wrapper">
+              <span class="info-input-label">Y</span>
+              <input type="number" id="actualY" class="info-input" value="0">
+            </div>
+          </div>
+          <div class="form-group info-input-group">
+            <div class="info-input-wrapper">
+              <span class="info-input-label">W</span>
+              <input type="number" id="actualW" class="info-input" value="0">
+            </div>
+            <div class="info-input-wrapper">
+              <span class="info-input-label">H</span>
+              <input type="number" id="actualH" class="info-input" value="0">
+            </div>
+          </div>
+
+          <div class="info-section-title">Shared Info</div>
           <div class="info-stat">
             <span class="info-stat-label">Ratio:</span>
-            <span class="info-stat-value" id="ratioInfo">4:3</span>
+            <span class="info-stat-value" id="ratioInfo">1:1</span>
           </div>
           <div class="info-stat">
             <span class="info-stat-label">Zoom:</span>
             <span class="info-stat-value" id="zoomInfo">100%</span>
           </div>
+
         </div>
       </div>
-    </div>
+      </div>
 
     <div class="media-viewer">
       <div id="container">
