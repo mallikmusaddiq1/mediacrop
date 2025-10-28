@@ -1720,7 +1720,6 @@ class CropHandler(BaseHTTPRequestHandler):
                 self.send_error(500, f"Error getting file info: {str(e)}")
         else:
             self.send_error(404, "Not Found")
-
     def do_POST(self):
         if self.path == "/save":
             try:
@@ -1732,20 +1731,64 @@ class CropHandler(BaseHTTPRequestHandler):
                 body = self.rfile.read(length)
                 data = json.loads(body.decode("utf-8"))
                 
-                required_fields = ['w', 'h', 'x', 'y']
+                required_fields = ['w', 'h', 'x', 'y', 'mediaType']
                 for field in required_fields:
-                    if field not in data or not isinstance(data[field], (int, float)) or data[field] < 0:
-                        self.send_error(400, f"Invalid or missing {field} parameter")
+                    if field not in data:
+                        self.send_error(400, f"Invalid or missing '{field}' parameter")
                         return
+                    if field in ['w', 'h', 'x', 'y'] and (not isinstance(data[field], (int, float)) or data[field] < 0):
+                         self.send_error(400, f"Invalid numeric value for '{field}'")
+                         return
                 
                 w = int(data['w'])
                 h = int(data['h'])
                 x = int(data['x'])
                 y = int(data['y'])
-
+                media_type = data['mediaType']
                 crop_filter = f"crop={w}:{h}:{x}:{y}"
+                
+                input_file_path = self.server.media_file
+                path_part, ext_part = os.path.splitext(input_file_path)
+                ext_lower = ext_part.lower()
+                
+                i = 1
+                while True:
+                    output_file_name = f"{path_part}_crop_{w}x{h}_{i}{ext_part}"
+                    if not os.path.exists(output_file_name):
+                        break
+                    i += 1
+                
+                ffmpeg_command = ""
+                
+                if media_type == 'video':
+                    ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{crop_filter}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "{output_file_name}"'
+                
+                elif media_type == 'image':
+                    if ext_lower in ['.png']:
+                        ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{crop_filter}" -plays 0 "{output_file_name}"'
+                    
+                    elif ext_lower in ['.webp']:
+                        ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{crop_filter}" -loop 0 "{output_file_name}"'
+                    
+                    elif ext_lower in ['.jpg', '.jpeg']:
+                        ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{crop_filter}" -q:v 1 "{output_file_name}"'
+                    
+                    elif ext_lower in ['.gif']:
+                        palette_filter = f'{crop_filter},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse'
+                        ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{palette_filter}" "{output_file_name}"'
+                    
+                    else:
+                        ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{crop_filter}" -q:v 1 "{output_file_name}"'
 
-                print(f"\n{crop_filter}") 
+                elif media_type == 'audio':
+                    ffmpeg_command = "echo 'Cropping is not applicable to audio-only files.'"
+                    crop_filter = "N/A (Audio File)"
+                
+                else: 
+                    ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{crop_filter}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "{output_file_name}"'
+
+                print(f"\n# {crop_filter}")
+                print(f"\n{ffmpeg_command}")
                 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
@@ -1755,8 +1798,10 @@ class CropHandler(BaseHTTPRequestHandler):
                 
                 self.wfile.write(json.dumps({
                     "success": True,
-                    "message": "Crop filter string printed to terminal",
+                    "message": "Crop filter and suggested command printed to terminal.",
                     "crop_filter": crop_filter,
+                    "suggested_command": ffmpeg_command,
+                    "output_file": output_file_name,
                     "timestamp": self.date_time_string()
                 }).encode("utf-8"))
                 
@@ -1765,11 +1810,11 @@ class CropHandler(BaseHTTPRequestHandler):
             except KeyError as e:
                 self.send_error(400, f"Missing required field: {e}")
             except Exception as e:
-                print(f"Server POST Error: {e}")
+                import sys
+                print(f"Server POST Error: {e}", file=sys.stderr)
                 self.send_error(500, f"Server error: {str(e)}")
         else:
             self.send_error(404, "Not Found")
-
 
     def do_OPTIONS(self):
         self.send_response(200)

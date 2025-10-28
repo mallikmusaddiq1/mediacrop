@@ -1322,8 +1322,7 @@ def get_javascript_code(media_type, ext):
 
     function resetCropSize() {{
       if (state.mediaType === 'audio' || !elements.crop) return;
-      
-      // Clear saved state from localStorage
+
       const key = getStorageKey();
       if (key) localStorage.removeItem(key);
       
@@ -1413,8 +1412,7 @@ def get_javascript_code(media_type, ext):
                  state.aspectRatio = null;
               }}
             }}
-            
-            // --- IMPROVEMENT: Haptic Feedback ---
+
             utils.vibrate(10);
             
             if (state.keepAspect) {{
@@ -1802,8 +1800,7 @@ def get_javascript_code(media_type, ext):
         elements.floatingPreview.style.transition = '';
         document.removeEventListener('touchmove', handlePreviewPinchMove); 
     }}
-    
-    // --- IMPROVEMENT: Label Drag Handlers ---
+
     const labelDragHandler = {{
         start(e, inputElement) {{
             e.preventDefault();
@@ -1811,9 +1808,7 @@ def get_javascript_code(media_type, ext):
             
             if (!inputElement) return;
 
-            // --- ⬇️ YEH LINE MODIFY KI GAYI HAI ⬇️ ---
             if (inputElement.disabled) return;
-            // --- ⬆️ MODIFICATION END ⬆️ ---
 
             state.isLabelDragging = true;
             state.labelDragInput = inputElement;
@@ -1883,29 +1878,25 @@ def get_javascript_code(media_type, ext):
       }}
       
       if (elements.mediaViewer) {{
-          elements.mediaViewer.style.cursor = 'grab'; // Initial cursor for panning
+          elements.mediaViewer.style.cursor = 'grab';
           elements.mediaViewer.addEventListener("wheel", handleMouseWheelZoom, {{ passive: false }});
 
           elements.mediaViewer.addEventListener("mousedown", panHandlers.start, {{ passive: false }});
-          // Touch pan is handled by handleMediaTouchStart
       }}
       
       elements.aspectSelect.addEventListener("change", handleAspectRatioChange);
       elements.customW.addEventListener("input", utils.debounce(updateCustomAspectRatio, 300));
       elements.customH.addEventListener("input", utils.debounce(updateCustomAspectRatio, 300));
       
-      // --- ⬇️ YEH BLOCK MODIFY KIYA GAYA HAI ⬇️ ---
       elements.keepAspect.addEventListener('change', (e) => {{
           state.keepAspect = e.target.checked;
-          
-          // Inputs ko naye state ke hisaab se lock/unlock karein
+
           toggleInputEditability(state.keepAspect);
           
           if (state.keepAspect) {{
               applyCurrentAspectRatio();
           }}
       }});
-      // --- ⬆️ MODIFICATION END ⬆️ ---
       
       document.addEventListener("keydown", handleKeyboard);
       
@@ -1981,43 +1972,54 @@ def get_javascript_code(media_type, ext):
           }}
       }});
 
-      // --- ⬇️ YEH LINE ADD KI GAYI HAI ⬇️ ---
-      // Page load par initial state set karein (default 'checked' hai)
       toggleInputEditability(elements.keepAspect.checked);
-      // --- ⬆️ MODIFICATION END ⬆️ ---
     }}
 
     document.addEventListener("DOMContentLoaded", function() {{
       initializeTheme();
       setupEventListeners();
       
-      if (elements.media) {{
-          if ((elements.media.readyState >= 1 && (media_type === 'video' || media_type === 'audio')) || (elements.media.complete && media_type === 'image')) {{
-             console.log("Media already loaded or has metadata.");
-             initializeCrop();
-          }} else {{
-              console.log("Media not loaded yet, adding listeners.");
-              if (media_type === 'video' || media_type === 'audio') {{
-                  elements.media.addEventListener('loadedmetadata', initializeCrop, {{ once: true }});
+      const mediaElement = elements.media;
+      const mediaType = state.mediaType;
+
+      const onMediaError = () => {{
+          console.error("Media failed to load.");
+          const errorElement = document.getElementById('unsupported') || elements.mediaWrapper;
+          if (errorElement) {{
+              errorElement.innerHTML = '<div class="unsupported-content"><div class="unsupported-icon">⚠️</div><div class="unsupported-text">Error Loading Media</div><div class="unsupported-subtext">The file might be corrupt or inaccessible.</div></div>';
+              if (elements.container) {{
+                  elements.container.style.width = '500px'; 
+                  elements.container.style.height = '300px';
               }}
-              if (media_type === 'image') {{
-                 elements.media.addEventListener('load', initializeCrop, {{ once: true }});
-              }}
-              elements.media.addEventListener('canplay', initializeCrop, {{ once: true }});
-              elements.media.addEventListener('error', () => {{
-                console.error("Media failed to load.");
-                const errorElement = document.getElementById('unsupported') || elements.mediaWrapper;
-                if (errorElement) {{
-                    errorElement.innerHTML = '<div class="unsupported-content"><div class="unsupported-icon">⚠️</div><div class="unsupported-text">Error Loading Media</div><div class="unsupported-subtext">The file might be corrupt or inaccessible.</div></div>';
-                    elements.container.style.width = '500px'; 
-                    elements.container.style.height = '300px';
-                }}
-                hideLoading();
-              }}, {{ once: true }});
           }}
-      }} else if (media_type === 'unsupported') {{
+          hideLoading();
+      }};
+
+      if (mediaElement) {{
+          if (mediaType === 'image') {{
+              if (mediaElement.complete) {{
+                  console.log("Image already complete (cached). Initializing.");
+                  initializeCrop();
+              }} else {{
+                  console.log("Image not complete. Adding 'load' and 'error' listeners.");
+                  mediaElement.addEventListener('load', initializeCrop, {{ once: true }});
+                  mediaElement.addEventListener('error', onMediaError, {{ once: true }});
+              }}
+          }} else if (mediaType === 'video' || mediaType === 'audio') {{
+              if (mediaElement.readyState >= 1) {{ // 1 = HAVE_METADATA
+                  console.log("Media already has metadata. Initializing.");
+                  initializeCrop();
+              }} else {{
+                  console.log("Media metadata not loaded. Adding 'loadedmetadata' and 'error' listeners.");
+                  mediaElement.addEventListener('loadedmetadata', initializeCrop, {{ once: true }});
+                  mediaElement.addEventListener('error', onMediaError, {{ once: true }});
+              }}
+          }}
+          
+      }} else if (mediaType === 'unsupported') {{
           console.log("Unsupported media type, initializing with default box.");
-          setTimeout(initializeCrop, 50); 
+          setTimeout(initializeCrop, 50);
+          
       }} else {{
          console.error("Media element not found and type is not 'unsupported'.");
          hideLoading();
