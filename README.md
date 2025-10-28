@@ -35,21 +35,23 @@ This endless loop consumed valuable time and energy. **MediaCrop** was created t
 
 | Category          | Feature                          | Description                                                                 |
 |-------------------|----------------------------------|-----------------------------------------------------------------------------|
-| **Interface & UX** | 🌌 **Light & Dark Themes**       | Switch seamlessly between themes, with preferences automatically saved in your browser. |
-|                   | 🖼️ **Resizable Live Preview**    | Real-time preview in a floating window that is movable, resizable via 8 handles, and supports pinch-to-zoom gestures. |
+| **Interface & UX** | 🌌 **Light & Dark Themes**       | Seamlessly switch themes. **Auto-detects OS preference** on first load and saves your choice in local storage. |
+|                   | 🖼️ **Resizable Live Preview**    | Real-time preview in a floating, draggable window. Features 8 resize handles, pinch-to-zoom, and **long-press to fullscreen**. |
 |                   | 📱 **Responsive Design**         | Automatically adapts to all screen sizes—desktop, tablet, and mobile devices. |
-|                   | 🖐️ **Native Touch Experience**   | Advanced touch gestures for resizing, dragging, and zooming, with disabled browser context menus for an immersive, app-like feel. |
-|                   | 🔔 **Custom Notifications**      | Clean, modern notifications appear on save actions, replacing intrusive browser alerts. |
+|                   | 🖐️ **Native Touch Experience**   | Full touch support with gestures like **double-tap to zoom**, pinch-to-zoom, and **subtle haptic feedback** on key actions. |
+|                   | 💾 **State Persistence**         | **Automatically saves your crop position** and zoom level in your browser. Refreshing the page won't lose your work. |
+|                   | 🔔 **Custom Notifications**      | Clean, non-blocking notifications appear on save actions, replacing intrusive browser alerts. |
 | **Media Handling**| ⏯️ **Full Video Controls**       | Comprehensive controls including play/pause, seek bar, playback speed adjustment, time display, and volume/mute options. |
 |                   | 🎵 **Broad Format Support**      | Previews a wide range of image, video, and audio formats, with graceful fallbacks for unsupported files. |
-| **Precision Tools**| 📊 **Bi-directional Info Panel** | Displays and accepts coordinates; type exact 'Preview' (scaled) or 'Actual' (native) values for pixel-perfect precision. |
+| **Precision Tools**| 📊 **Bi-directional Info Panel** | Type exact 'Preview' or 'Actual' coordinates. Now supports **click-and-drag "scrubbing"** on labels (X, Y, W, H) for rapid adjustment. |
 |                   | 📐 **Aspect Ratio Presets**      | Select standard ratios like *16:9, 4:3, 9:16, 1:1* or input a custom ratio. |
 |                   | 🔒 **Keep Aspect Ratio Toggle**  | Dedicated checkbox to lock the crop box's aspect ratio during resizing. |
-|                   | 🔎 **Media Zoom**                | Zoom in/out precisely using the mouse wheel or pinch gestures directly on the media. |
+|                   | 🔎 **Advanced Zoom & Pan**       | Zoom in/out with the mouse wheel or pinch. **Pan the zoomed media** using `Alt + Drag`, middle-mouse drag, or one-finger drag on mobile. |
 |                   | ⌨️ **Keyboard Controls**         | Nudge the crop box with Arrow Keys (10px steps) or fine-tune with Shift + Arrow Keys (1px steps). |
 |                   | 🔧 **Quick Tools & Context Menu**| Instantly center, toggle grid, or reset via the sidebar or right-click context menu. |
 | **System**        | ⚙️ **Zero Dependencies**         | Runs entirely on Python’s standard library—no additional installations required. |
 |                   | 🔌 **Smart Port Detection**      | Automatically selects an available port if the default (8000) is occupied. |
+|                   | 🔄 **Rotation Metadata Handling**| **Automatically detects video rotation** (e.g., from mobile phones) using `ffprobe` and displays dimensions correctly. |
 |                   | 💻 **Advanced Cross-Platform**   | Fully compatible with Windows, macOS, and Linux, including explicit auto-open support for Termux and WSL environments. |
 |                   | 🛡️ **Robust CLI**                | Powered by `argparse` for standardized, reliable command-line help (`-h`) and version (`--version`) flags. |
 
@@ -76,7 +78,7 @@ A modern interface available in both light and dark themes, optimized for every 
 
 ## ⚙️ Installation
 
-Requires **Python 3.7+**.
+Requires **Python 3.7+** and **FFmpeg** (with `ffprobe`) installed and available in your system's PATH.
 
 ### Option 1: Install from PyPI (Recommended)
 
@@ -112,7 +114,7 @@ mediacrop "/path/to/your/mediafile.mp4"
 > * The tool automatically launches in your default browser at `http://127.0.0.1:8000`.
 > * Adjust the crop box visually, apply aspect ratios, or type exact coordinates into the sidebar.
 > * Click 💾 **Save Coordinates** to confirm.
->   * The FFmpeg crop string appears in your terminal.
+>   * The FFmpeg crop filter string (e.g., `crop=...`) appears in your terminal.
 >   * Press `Ctrl + C` in the terminal to stop the server.
 
 ### 🕹️ Command-Line Options
@@ -144,20 +146,21 @@ ffmpeg -i input.mp4 -vf "crop=1280:720:320:180" output_cropped.mp4
 
 ## ⌨️ Controls & Shortcuts
 
-| Action                  | Control                          |
-|-------------------------|----------------------------------|
-| Move Crop Box           | Click + Drag / Arrow Keys        |
-| Fine Move (1px)         | Shift + Arrow Keys               |
-| Resize Crop Box         | Drag Edges/Corners / Pinch (Touch) |
-| Set Coordinates Manually| Type values into 'Preview' or 'Actual' sidebar inputs. |
-| Zoom Media View         | Mouse Wheel / Pinch (Touch) on media |
+| Action                  | Control                                      |
+|-------------------------|----------------------------------------------|
+| Move Crop Box           | Click + Drag / Arrow Keys                    |
+| Fine Move (1px)         | Shift + Arrow Keys                           |
+| Resize Crop Box         | Drag Edges/Corners / Pinch (Touch)           |
+| Set Coordinates Manually| Type in sidebar inputs / Click & Drag on X,Y,W,H labels |
+| Zoom Media View         | Mouse Wheel / Pinch (Touch) / Double-Tap (Touch) |
+| Pan Media View (when zoomed) | Alt + Drag / Middle-Mouse Drag / One-Finger Drag (Touch) |
 | Resize Preview Window   | Drag 8 handles on preview / Pinch (Touch) on preview |
-| Fullscreen Preview      | Long-Press on Live Preview Window |
-| Toggle Grid             | G Key                            |
-| Center Crop Box         | C Key                            |
-| Save Coordinates        | Enter Key                        |
-| Toggle Help Panel       | ? Key / Esc to Close             |
-| Access Quick Tools      | Right-Click on Crop Box          |
+| Fullscreen Preview      | Long-Press on Live Preview Window            |
+| Toggle Grid             | G Key                                        |
+| Center Crop Box         | C Key                                        |
+| Save Coordinates        | Enter Key                                    |
+| Toggle Help Panel       | ? Key / Esc to Close                         |
+| Access Quick Tools      | Right-Click on Crop Box                      |
 
 ---
 

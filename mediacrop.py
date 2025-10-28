@@ -18,7 +18,7 @@ from utils import get_file_info
 media_file = None
 verbose = False
 
-__version__ = "4.3.0"
+__version__ = "5.0.0"
 DEFAULT_PORT = 8000
 
 def port_type(value):
@@ -33,8 +33,7 @@ def port_type(value):
 
 def parse_arguments():
     """Parses command-line arguments using argparse for robustness."""
-    
-    # Help message ka content yahan epilog mein daal diya hai
+
     help_epilog = """
 Supported Preview Formats:
   Images : JPG, PNG, WEBP, AVIF, GIF, BMP, SVG, ICO
@@ -162,7 +161,6 @@ def main():
     port = args.port
     host = args.host
 
-    # --- Step 2: File Validation (Aapka original logic) ---
     if not os.path.exists(media_file):
         print(f"Error: File not found - {media_file}", file=sys.stderr)
         sys.exit(1)
@@ -171,7 +169,6 @@ def main():
         print(f"Error: Permission denied - {media_file}", file=sys.stderr)
         sys.exit(1)
 
-    # --- Step 3: File Info (Aapka original logic) ---
     file_info = get_file_info(media_file)
     if file_info:
         file_size_gb = file_info['size'] / (1024 * 1024 * 1024)
@@ -188,7 +185,7 @@ def main():
   
     server = None
     original_port = port
-    max_attempts = 100    # 10 ki jagah 100 attempts, zyaada robust
+    max_attempts = 100
     
     for attempt in range(max_attempts):
         try:
@@ -197,8 +194,8 @@ def main():
             server.verbose = verbose
             break  # Port mil gaya, loop se bahar niklo
         except OSError as e:
-            if e.errno == 98:  # Address already in use
-                if attempt == 0:  # Sirf pehli baar fail hone par message dikhao
+            if e.errno == 98:
+                if attempt == 0:
                     print(f"Port {original_port} is busy, trying next available port...")
                 port += 1
             else:
@@ -207,11 +204,9 @@ def main():
                 sys.exit(1)
 
     if server is None:
-        # Loop poora ho gaya aur port nahi mila
         print(f"Error: Could not find an available port starting from {original_port}.", file=sys.stderr)
         sys.exit(1)
   
-    # Agar port badla hai, toh naya URL istemaal hoga
     url = f"http://{host}:{port}"
     try:
         auto_open_success = open_browser_auto(url, verbose)

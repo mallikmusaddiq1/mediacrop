@@ -89,10 +89,28 @@ def get_javascript_code(media_type, ext):
       holdTimer: null,
       isResizingPreview: false,
       isUpdating: false,
+      // --- IMPROVEMENT: State for Panning ---
+      isPanning: false,
+      panStartX: 0,
+      panStartY: 0,
+      panStartScrollLeft: 0,
+      panStartScrollTop: 0,
+      // --- IMPROVEMENT: State for Double Tap ---
+      lastTapTime: 0,
+      // --- IMPROVEMENT: State for Label Drag ---
+      isLabelDragging: false,
+      labelDragInput: null,
+      labelDragStartX: 0,
+      labelDragInitialValue: 0,
     }};
     
+    // --- IMPROVEMENT: System Theme Detection ---
     function initializeTheme() {{
-        const storedTheme = localStorage.getItem('theme') || 'dark'; 
+        let storedTheme = localStorage.getItem('theme');
+        if (!storedTheme) {{
+            const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+            storedTheme = prefersLight ? 'light' : 'dark';
+        }}
         setTheme(storedTheme);
     }}
     
@@ -143,7 +161,14 @@ def get_javascript_code(media_type, ext):
                     y: e.touches[0].clientY
                 }};
             }}
-            return {{x: e.clientX, y: e.clientY}};
+            // Fallback for touchend events which might not have e.touches
+            if (e.changedTouches && e.changedTouches.length > 0) {{
+                return {{
+                    x: e.changedTouches[0].clientX,
+                    y: e.changedTouches[0].clientY
+                }};
+            }}
+            return {{x: 0, y: 0}}; // Return a default if no coords found
         }}
         return {{
           x: e.clientX,
@@ -188,8 +213,65 @@ def get_javascript_code(media_type, ext):
           return `${{hours}}:${{mins.toString().padStart(2, '0')}}:${{secs.toString().padStart(2, '0')}}`;
         }}
         return `${{mins}}:${{secs.toString().padStart(2, '0')}}`;
+      }},
+      
+      // --- IMPROVEMENT: Haptic Feedback ---
+      vibrate(duration = 10) {{
+        if (navigator.vibrate) {{
+            try {{
+                navigator.vibrate(duration);
+            }} catch (e) {{
+                console.warn("Haptic feedback failed", e);
+            }}
+        }}
       }}
     }};
+    
+    // --- IMPROVEMENT: State Persistence (Crop Memory) ---
+    function getStorageKey() {{
+        // Using file extension and natural dimensions as a proxy for file uniqueness
+        if (!state.naturalWidth || !state.naturalHeight || !state.fileExtension) return null;
+        return `mediacrop-v1-${{state.fileExtension}}-${{state.naturalWidth}}x${{state.naturalHeight}}`;
+    }}
+
+    const saveCropToStorage = utils.debounce(() => {{
+        const key = getStorageKey();
+        if (!key || !elements.crop) return;
+        
+        try {{
+            const data = {{
+                left: elements.crop.style.left,
+                top: elements.crop.style.top,
+                width: elements.crop.style.width,
+                height: elements.crop.style.height,
+                zoom: state.zoom
+            }};
+            localStorage.setItem(key, JSON.stringify(data));
+        }} catch (e) {{
+            console.warn("Failed to save crop state to localStorage", e);
+        }}
+    }}, 500);
+
+    function loadCropFromStorage() {{
+        const key = getStorageKey();
+        if (!key) return false;
+        
+        try {{
+            const data = localStorage.getItem(key);
+            if (data) {{
+                const {{ left, top, width, height, zoom }} = JSON.parse(data);
+                if (left && top && width && height && zoom) {{
+                    setMediaZoom(zoom, true); // Set zoom without re-scaling crop box yet
+                    setCropDimensions(parseFloat(left), parseFloat(top), parseFloat(width), parseFloat(height));
+                    return true;
+                }}
+            }}
+        }} catch (e) {{
+            console.warn("Failed to load crop state from localStorage", e);
+            localStorage.removeItem(key); // Clear corrupted data
+        }}
+        return false;
+    }}
     
     function updatePreview() {{
         if (!state.isInitialized || state.mediaType === 'unsupported' || !elements.floatingPreview) {{
@@ -354,13 +436,17 @@ def get_javascript_code(media_type, ext):
       requestAnimationFrame(() => {{ 
         if (state.isInitialized) return;
 
-        updateMediaDimensions();
+        updateMediaDimensions(); // First, get natural dimensions
         updateFileInfo();
         
         if (state.mediaType === 'image' || state.mediaType === 'video' || state.mediaType === 'unsupported') {{
-            positionCropBox();
+            // --- IMPROVEMENT: Load from storage BEFORE positioning ---
+            const loadedFromStorage = loadCropFromStorage();
+            if (!loadedFromStorage) {{
+                positionCropBox(); // Position new box only if nothing was loaded
+                setMediaZoom(1);
+            }}
             updateCropInfo();
-            setMediaZoom(1);
         }}
         
         if (state.mediaType === 'video') {{
@@ -465,6 +551,9 @@ def get_javascript_code(media_type, ext):
     function setCropDimensions(left, top, width, height, smooth = false) {{
       if (!elements.crop) return;
       
+      const oldLeft = parseFloat(elements.crop.style.left) || 0;
+      const oldTop = parseFloat(elements.crop.style.top) || 0;
+      
       width = Math.max(30, width);
       height = Math.max(30, height);
       
@@ -473,6 +562,13 @@ def get_javascript_code(media_type, ext):
       
       width = Math.min(width, state.mediaWidth - left);
       height = Math.min(height, state.mediaHeight - top);
+      
+      // --- IMPROVEMENT: Haptic Feedback on Edge Snap ---
+      if ((left === 0 && oldLeft !== 0) || (top === 0 && oldTop !== 0) ||
+          (left + width === state.mediaWidth && oldLeft + width !== state.mediaWidth) ||
+          (top + height === state.mediaHeight && oldTop + height !== state.mediaHeight)) {{
+          utils.vibrate(5); // Short vibration for edge snap
+      }}
       
       const cropStyle = elements.crop.style;
       
@@ -487,6 +583,9 @@ def get_javascript_code(media_type, ext):
       cropStyle.height = Math.round(height) + 'px';
       
       updateCropInfo();
+      
+      // --- IMPROVEMENT: Save to localStorage ---
+      saveCropToStorage();
     }}
 
     function applyAspectRatio(width, height, maintainWidth = true) {{
@@ -595,7 +694,8 @@ def get_javascript_code(media_type, ext):
       setCropDimensions(pX, pY, pW, pH);
     }}
 
-    function setMediaZoom(newZoom) {{
+    // --- IMPROVEMENT: Modified setMediaZoom for localStorage ---
+    function setMediaZoom(newZoom, initialLoad = false) {{
       if (state.mediaType !== 'image' && state.mediaType !== 'video') return;
       newZoom = Math.max(0.1, Math.min(10, newZoom));
       
@@ -610,7 +710,8 @@ def get_javascript_code(media_type, ext):
         elements.media.style.height = (state.naturalHeight * newZoom) + 'px';
       }}
       
-      if (elements.crop) {{
+      // Don't rescale crop box if we are just loading from storage
+      if (elements.crop && !initialLoad) {{
         elements.crop.style.left = (parseFloat(elements.crop.style.left) * factor) + 'px';
         elements.crop.style.top = (parseFloat(elements.crop.style.top) * factor) + 'px';
         elements.crop.style.width = (parseFloat(elements.crop.style.width) * factor) + 'px';
@@ -619,11 +720,18 @@ def get_javascript_code(media_type, ext):
       
       updateMediaDimensions();
       updateCropInfo();
+      
+      // Save zoom state unless it's the initial load (which is handled by setCropDimensions)
+      if (!initialLoad) {{
+          saveCropToStorage();
+      }}
     }}
 
     const dragHandlers = {{
       start(e) {{
-        if (!elements.crop || e.target.classList.contains('resize-handle')) return;
+        // --- IMPROVEMENT: Don't drag crop box if panning ---
+        if (!elements.crop || e.target.classList.contains('resize-handle') || state.isPanning) return;
+        
         e.preventDefault();
         e.stopPropagation();
         
@@ -669,7 +777,7 @@ def get_javascript_code(media_type, ext):
         const currentHeight = parseFloat(elements.crop.style.height) || 0;
         
         setCropDimensions(newLeft, newTop, currentWidth, currentHeight);
-      }}, 16),
+      }}, 16), // 16ms throttle targets ~60fps
       
       stop() {{
         state.isDragging = false;
@@ -771,7 +879,7 @@ def get_javascript_code(media_type, ext):
         }}
         
         setCropDimensions(newLeft, newTop, newWidth, newHeight);
-      }}, 16),
+      }}, 16), // 16ms throttle
       
       stop() {{
         state.isResizing = false;
@@ -785,6 +893,64 @@ def get_javascript_code(media_type, ext):
         document.removeEventListener('touchmove', updateMousePosTouch);
         stopAutoScroll();
       }}
+    }};
+    
+    // --- IMPROVEMENT: Panning Handlers ---
+    const panHandlers = {{
+        start(e) {{
+            if (state.mediaType === 'audio') return;
+            
+            const isTouch = e.type.startsWith('touch');
+            const isZoomed = state.zoom > 1;
+            
+            // Pan conditions:
+            // 1. Desktop: Alt key OR Middle mouse button
+            // 2. Mobile: 1-finger touch AND zoomed in AND not touching crop box
+            const isDesktopPan = !isTouch && (e.altKey || e.button === 1);
+            const isMobilePan = isTouch && e.touches.length === 1 && isZoomed && !elements.crop.contains(e.target);
+            
+            if (!isDesktopPan && !isMobilePan) return;
+            
+            // Prevent text selection / default browser pan
+            e.preventDefault();
+            e.stopPropagation();
+
+            state.isPanning = true;
+            const coords = utils.getEventCoords(e);
+            state.panStartX = coords.x;
+            state.panStartY = coords.y;
+            state.panStartScrollLeft = elements.mediaViewer.scrollLeft;
+            state.panStartScrollTop = elements.mediaViewer.scrollTop;
+
+            elements.mediaViewer.style.cursor = 'grabbing';
+
+            document.addEventListener('mousemove', panHandlers.move, {{ passive: false }});
+            document.addEventListener('mouseup', panHandlers.stop);
+            document.addEventListener('touchmove', panHandlers.move, {{ passive: false }});
+            document.addEventListener('touchend', panHandlers.stop);
+        }},
+        
+        move: utils.throttle((e) => {{
+            if (!state.isPanning) return;
+            e.preventDefault();
+            
+            const coords = utils.getEventCoords(e);
+            const deltaX = coords.x - state.panStartX;
+            const deltaY = coords.y - state.panStartY;
+            
+            elements.mediaViewer.scrollLeft = state.panStartScrollLeft - deltaX;
+            elements.mediaViewer.scrollTop = state.panStartScrollTop - deltaY;
+        }}, 16), // 16ms throttle
+        
+        stop() {{
+            state.isPanning = false;
+            elements.mediaViewer.style.cursor = 'grab';
+
+            document.removeEventListener('mousemove', panHandlers.move);
+            document.removeEventListener('mouseup', panHandlers.stop);
+            document.removeEventListener('touchmove', panHandlers.move);
+            document.removeEventListener('touchend', panHandlers.stop);
+        }}
     }};
     
     function handleMouseWheelZoom(e) {{
@@ -802,11 +968,14 @@ def get_javascript_code(media_type, ext):
 
       const contentX = viewer.scrollLeft + relativeX;
       const contentY = viewer.scrollTop + relativeY;
-
+      
+      const oldZoom = state.zoom;
       setMediaZoom(newZoom);
-
-      const newContentX = contentX * (newZoom / state.zoom);
-      const newContentY = contentY * (newZoom / state.zoom);
+      
+      // Calculate new scroll position to keep zoom centered on mouse
+      const newFactor = state.zoom / oldZoom;
+      const newContentX = contentX * newFactor;
+      const newContentY = contentY * newFactor;
 
       viewer.scrollLeft = newContentX - relativeX;
       viewer.scrollTop = newContentY - relativeY;
@@ -815,6 +984,9 @@ def get_javascript_code(media_type, ext):
     function startPinch(type, e) {{
       if (e.touches.length !== 2) return;
       if (type === 'media' && state.mediaType !== 'image' && state.mediaType !== 'video') return;
+      
+      // Prevent panning if pinching
+      state.isPanning = false; 
       
       state.isPinching = true;
       state.pinchType = type;
@@ -873,7 +1045,7 @@ def get_javascript_code(media_type, ext):
         const oldZoom = state.zoom;
         setMediaZoom(newZoom);
         
-        const newFactor = newZoom / oldZoom;
+        const newFactor = state.zoom / oldZoom;
         const viewer = elements.mediaViewer;
         
         const contentX = state.pinchInitialScrollLeft + state.pinchInitialRelX;
@@ -896,11 +1068,62 @@ def get_javascript_code(media_type, ext):
     }}
     
     function handleMediaTouchStart(e) {{
+      // This handles 1-finger pan start (via panHandlers) and 2-finger pinch start
+      panHandlers.start(e);
+      
       if (e.touches.length === 2 && state.mediaType !== 'audio') {{
         e.preventDefault();
         startPinch('media', e);
       }}
     }}
+    
+    // --- IMPROVEMENT: Double Tap to Zoom ---
+    function handleDoubleTap(e) {{
+        if (state.mediaType === 'audio' || state.isPinching || e.touches.length > 0) return;
+
+        const now = new Date().getTime();
+        const timeSinceLastTap = now - state.lastTapTime;
+
+        if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {{
+            // Double tap detected
+            e.preventDefault();
+            
+            const viewer = elements.mediaViewer;
+            
+            if (state.zoom > 1) {{
+                // Zoom out and center
+                setMediaZoom(1);
+                const targetScrollLeft = (viewer.scrollWidth - viewer.clientWidth) / 2;
+                const targetScrollTop = (viewer.scrollHeight - viewer.clientHeight) / 2;
+                viewer.scrollTo({{ left: targetScrollLeft, top: targetScrollTop, behavior: 'smooth' }});
+            }} else {{
+                // Zoom in at tap location
+                const rect = viewer.getBoundingClientRect();
+                const coords = utils.getEventCoords(e);
+                const relativeX = coords.x - rect.left;
+                const relativeY = coords.y - rect.top;
+
+                const contentX = viewer.scrollLeft + relativeX;
+                const contentY = viewer.scrollTop + relativeY;
+                
+                const newZoom = 2;
+                setMediaZoom(newZoom);
+                
+                const newContentX = contentX * newZoom;
+                const newContentY = contentY * newZoom;
+
+                viewer.scrollTo({{ 
+                    left: newContentX - relativeX, 
+                    top: newContentY - relativeY, 
+                    behavior: 'smooth' 
+                }});
+            }}
+            state.lastTapTime = 0; // Reset tap time to prevent triple tap zoom
+        }} else {{
+            state.lastTapTime = now;
+        }}
+    }}
+
 
     function updateMousePos(e) {{
       state.mouseX = e.clientX;
@@ -1073,6 +1296,11 @@ def get_javascript_code(media_type, ext):
 
     function resetCropSize() {{
       if (state.mediaType === 'audio' || !elements.crop) return;
+      
+      // Clear saved state from localStorage
+      const key = getStorageKey();
+      if (key) localStorage.removeItem(key);
+      
       setMediaZoom(1);
       positionCropBox(); 
       elements.aspectSelect.value = "free";
@@ -1159,6 +1387,10 @@ def get_javascript_code(media_type, ext):
                  state.aspectRatio = null;
               }}
             }}
+            
+            // --- IMPROVEMENT: Haptic Feedback ---
+            utils.vibrate(10);
+            
             if (state.keepAspect) {{
                 applyCurrentAspectRatio();
             }}
@@ -1254,7 +1486,7 @@ def get_javascript_code(media_type, ext):
           notification.innerHTML = `
             <div class="notification-title">Crop Saved Successfully!</div>
             <div class="notification-code">${{data.crop_filter || `crop=${{finalW}}:${{finalH}}:${{finalX}}:${{finalY}}`}}</div>
-            <div class="notification-subtitle">FFmpeg command printed to terminal.</div>
+            <div class="notification-subtitle">Crop filter string printed to terminal.</div>
           `;
           document.body.appendChild(notification);
           setTimeout(() => {{
@@ -1544,6 +1776,60 @@ def get_javascript_code(media_type, ext):
         elements.floatingPreview.style.transition = '';
         document.removeEventListener('touchmove', handlePreviewPinchMove); 
     }}
+    
+    // --- IMPROVEMENT: Label Drag Handlers ---
+    const labelDragHandler = {{
+        start(e, inputElement) {{
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!inputElement) return;
+
+            state.isLabelDragging = true;
+            state.labelDragInput = inputElement;
+            state.labelDragStartX = e.clientX;
+            state.labelDragInitialValue = parseFloat(inputElement.value) || 0;
+            
+            document.body.style.cursor = 'ew-resize';
+            
+            document.addEventListener('mousemove', this.move, {{ passive: false }});
+            document.addEventListener('mouseup', this.stop, {{ once: true }});
+            document.addEventListener('touchmove', this.move, {{ passive: false }});
+            document.addEventListener('touchend', this.stop, {{ once: true }});
+        }},
+        
+        move: utils.throttle((e) => {{
+            if (!state.isLabelDragging || !state.labelDragInput) return;
+            e.preventDefault();
+            
+            const coords = utils.getEventCoords(e);
+            const deltaX = coords.x - state.labelDragStartX;
+
+            const step = e.shiftKey ? 0.1 : 1;
+            const newValue = state.labelDragInitialValue + Math.round(deltaX * step);
+
+            state.labelDragInput.value = newValue;
+            
+            state.labelDragInput.dispatchEvent(new Event('change'));
+            
+        }}, 32),
+        
+        stop() {{
+            state.isLabelDragging = false;
+            state.labelDragInput = null;
+            document.body.style.cursor = 'default';
+            
+            document.removeEventListener('mousemove', this.move);
+            document.removeEventListener('mouseup', this.stop);
+            document.removeEventListener('touchmove', this.move);
+            document.removeEventListener('touchend', this.stop);
+        }}
+    }};
+
+    labelDragHandler.start = labelDragHandler.start.bind(labelDragHandler);
+    labelDragHandler.move = labelDragHandler.move.bind(labelDragHandler);
+    labelDragHandler.stop = labelDragHandler.stop.bind(labelDragHandler);
+
 
     function setupEventListeners() {{
       elements.themeToggle.addEventListener("click", toggleTheme);
@@ -1562,10 +1848,16 @@ def get_javascript_code(media_type, ext):
       
       if (elements.mediaWrapper) {{
           elements.mediaWrapper.addEventListener("touchstart", handleMediaTouchStart, {{ passive: false }});
+
+          elements.mediaWrapper.addEventListener("touchend", handleDoubleTap, {{ passive: false }});
       }}
       
       if (elements.mediaViewer) {{
+          elements.mediaViewer.style.cursor = 'grab'; // Initial cursor for panning
           elements.mediaViewer.addEventListener("wheel", handleMouseWheelZoom, {{ passive: false }});
+
+          elements.mediaViewer.addEventListener("mousedown", panHandlers.start, {{ passive: false }});
+          // Touch pan is handled by handleMediaTouchStart
       }}
       
       elements.aspectSelect.addEventListener("change", handleAspectRatioChange);
@@ -1584,7 +1876,7 @@ def get_javascript_code(media_type, ext):
       window.addEventListener("resize", handleWindowResize);
       
       document.addEventListener("selectstart", e => {{
-        if (state.isDragging || state.isResizing || state.isResizingPreview || previewInteraction.isDragging || state.isPreviewPinching) {{
+        if (state.isDragging || state.isResizing || state.isResizingPreview || previewInteraction.isDragging || state.isPreviewPinching || state.isPanning || state.isLabelDragging) {{
             e.preventDefault();
         }}
       }});
@@ -1620,6 +1912,7 @@ def get_javascript_code(media_type, ext):
         elements.previewCloseBtn.addEventListener('click', closePreviewFullscreen);
       }}
 
+      // Input change listeners
       elements.previewX.addEventListener('change', handlePreviewInputChange);
       elements.previewY.addEventListener('change', handlePreviewInputChange);
       elements.previewW.addEventListener('change', handlePreviewInputChange);
@@ -1635,13 +1928,21 @@ def get_javascript_code(media_type, ext):
           elements.actualX, elements.actualY, elements.actualW, elements.actualH,
           elements.customW, elements.customH
       ];
+      
       inputs.forEach(input => {{
+
           input.addEventListener('keydown', (e) => {{
               if (e.key === 'Enter') {{
                   e.preventDefault();
                   e.target.blur();
               }}
           }});
+
+          const label = input.previousElementSibling;
+          if (label && label.classList.contains('info-input-label')) {{
+              label.style.cursor = 'ew-resize';
+              label.addEventListener('mousedown', (e) => labelDragHandler.start(e, input));
+          }}
       }});
     }}
 

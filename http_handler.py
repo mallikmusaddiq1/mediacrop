@@ -5,9 +5,11 @@ import os
 import json
 import time
 import mimetypes
+import subprocess
+import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
-from http_handler_js import get_javascript_code  # Import the JS code function
+from http_handler_js import get_javascript_code
 
 mimetypes.init()
 mimetypes.add_type('image/avif', '.avif')
@@ -22,6 +24,79 @@ class CropHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         if self.server.verbose:
             super().log_message(format, *args)
+
+    def _get_media_rotation(self, file_path, media_type):
+        """
+        Uses ffprobe to get the video's rotation metadata.
+        Returns rotation angle (e.g., 90, 270) or 0.
+        """
+        if media_type != "video":
+            return 0
+        
+        # We assume ffprobe is in the system PATH (part of FFmpeg suite)
+        command = [
+            "ffprobe",
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_streams",
+            "-select_streams", "v:0",
+            file_path
+        ]
+        
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True, encoding='utf-8')
+            data = json.loads(result.stdout)
+            
+            if not data.get("streams") or len(data["streams"]) == 0:
+                if self.server.verbose: print("ffprobe: No video streams found.", file=sys.stderr)
+                return 0
+            
+            stream = data["streams"][0]
+            
+            # Check side data first (common in MP4/MOV)
+            if "side_data_list" in stream:
+                for side_data in stream["side_data_list"]:
+                    if side_data.get("side_data_type") == "Display Matrix":
+                        # 'rotation' key might be present directly
+                        rotation = side_data.get("rotation")
+                        if rotation:
+                            # Clean up potential negative values like -90
+                            angle = int(float(rotation)) % 360
+                            if angle < 0: angle += 360
+                            if self.server.verbose: print(f"Rotation (Matrix): {angle} deg")
+                            return angle
+            
+            # Fallback to tags (common in MKV)
+            if "tags" in stream and "rotate" in stream["tags"]:
+                rotation = stream["tags"]["rotate"]
+                angle = int(float(rotation)) % 360
+                if angle < 0: angle += 360
+                if self.server.verbose: print(f"Rotation (Tags): {angle} deg")
+                return angle
+            
+            if self.server.verbose: print("No rotation metadata found.")
+            return 0
+            
+        except FileNotFoundError:
+            print("---", file=sys.stderr)
+            print("WARNING: 'ffprobe' command not found in PATH.", file=sys.stderr)
+            print("Rotation metadata check will be skipped.", file=sys.stderr)
+            print("Install FFmpeg (which includes ffprobe) to fix this.", file=sys.stderr)
+            print("---", file=sys.stderr)
+            return 0
+        except subprocess.CalledProcessError as e:
+            if self.server.verbose:
+                print(f"ffprobe error: {e.stderr}", file=sys.stderr)
+            return 0
+        except json.JSONDecodeError:
+            if self.server.verbose:
+                print("Failed to parse ffprobe JSON output.", file=sys.stderr)
+            return 0
+        except Exception as e:
+            if self.server.verbose:
+                print(f"Error checking rotation: {e}", file=sys.stderr)
+            return 0
+    # --- ROTATION FIX: END ---
 
     def _get_media_type_info(self, file_path):
         ext = os.path.splitext(file_path)[1].lower()
@@ -42,6 +117,7 @@ class CropHandler(BaseHTTPRequestHandler):
         media_tag = ""
         media_type = ""
         controls_html = ""
+        rotation = 0  # --- ROTATION FIX: Default rotation ---
 
         if ext in supported_image_exts:
             # CHANGE 1: Added oncontextmenu="return false;" to <img>
@@ -51,6 +127,10 @@ class CropHandler(BaseHTTPRequestHandler):
             # CHANGE 2: Added oncontextmenu="return false;" to <video>
             media_tag = f'<video id="media" preload="metadata" src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" draggable="false" oncontextmenu="return false;"></video>'
             media_type = "video"
+            
+            # --- ROTATION FIX: Check rotation for videos ---
+            rotation = self._get_media_rotation(file_path, media_type)
+            
             controls_html = '''
 <div class="video-controls" id="videoControls">
   <button id="playPause" class="control-btn" title="Play/Pause">▶️</button>
@@ -87,11 +167,14 @@ class CropHandler(BaseHTTPRequestHandler):
             media_tag = '<div id="unsupported"><div class="unsupported-content"><div class="unsupported-icon">📁</div><div class="unsupported-text">Format not supported for preview</div><div class="unsupported-subtext">You can still set crop coordinates (default size: 500x300)</div></div></div>'
             media_type = "unsupported"
         
-        return ext, media_tag, media_type, controls_html
+        # --- ROTATION FIX: Return rotation value ---
+        return ext, media_tag, media_type, controls_html, rotation
 
     def do_GET(self):
         path = urlparse(self.path).path
-        ext, media_tag, media_type, controls_html = self._get_media_type_info(self.server.media_file)
+        
+        # --- ROTATION FIX: Get rotation value from info function ---
+        ext, media_tag, media_type, controls_html, rotation = self._get_media_type_info(self.server.media_file)
 
         if path == "/":
             media_wrapper_start = '<div id="media-wrapper">'
@@ -106,6 +189,14 @@ class CropHandler(BaseHTTPRequestHandler):
                 media_section = media_wrapper_start + media_tag + click_overlay + crop_div + '</div>' + controls_html
             else:
                 media_section = media_wrapper_start + media_tag + '</div>' + controls_html 
+            
+            # --- ROTATION FIX: Inject rotation data into HTML for JS ---
+            rotation_script = f"""
+  <script>
+    // Data injected from Python server
+    window.MEDIA_ROTATION = {rotation};
+  </script>
+"""
             
             html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1513,6 +1604,7 @@ class CropHandler(BaseHTTPRequestHandler):
     <button class="preview-close-btn" id="previewCloseBtn" title="Close Fullscreen">&times;</button>
   </div>
 
+  {rotation_script}
   <script src="/main.js"></script>
 </body>
 </html>"""
@@ -1651,24 +1743,9 @@ class CropHandler(BaseHTTPRequestHandler):
                 x = int(data['x'])
                 y = int(data['y'])
 
-                input_file_path = self.server.media_file
-                path_part, ext_part = os.path.splitext(input_file_path)
-                
-                i = 1
-                while True:
-                    output_file_name = f"{path_part}_crop_{w}x{h}_{i}{ext_part}"
-                    if not os.path.exists(output_file_name):
-                        break
-                    i += 1
-                
-                if data.get('mediaType') == 'video':
-                    ffmpeg_command = f'\nffmpeg -i "{input_file_path}" -vf "crop={w}:{h}:{x}:{y}" -c:v libx264 -preset veryfast -crf 23 -c:a aac -b:a 192k "{output_file_name}"\n'
-                elif data.get('mediaType') == 'image':
-                    ffmpeg_command = f'\nffmpeg -i "{input_file_path}" -vf "crop={w}:{h}:{x}:{y}" -q:v 1 "{output_file_name}"\n'
-                else:
-                    ffmpeg_command = f'\nffmpeg -i "{input_file_path}" -vf "crop={w}:{h}:{x}:{y}" -c:v libx264 -preset veryfast -crf 23 -c:a copy "{output_file_name}"\n'
+                crop_filter = f"crop={w}:{h}:{x}:{y}"
 
-                print(ffmpeg_command)
+                print(f"\n{crop_filter}") 
                 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
@@ -1678,8 +1755,8 @@ class CropHandler(BaseHTTPRequestHandler):
                 
                 self.wfile.write(json.dumps({
                     "success": True,
-                    "message": "Crop parameters saved successfully",
-                    "crop_filter": f"crop={w}:{h}:{x}:{y}",
+                    "message": "Crop filter string printed to terminal",
+                    "crop_filter": crop_filter,
                     "timestamp": self.date_time_string()
                 }).encode("utf-8"))
                 
@@ -1692,6 +1769,7 @@ class CropHandler(BaseHTTPRequestHandler):
                 self.send_error(500, f"Server error: {str(e)}")
         else:
             self.send_error(404, "Not Found")
+
 
     def do_OPTIONS(self):
         self.send_response(200)
