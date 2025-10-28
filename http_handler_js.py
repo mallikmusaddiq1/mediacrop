@@ -694,6 +694,32 @@ def get_javascript_code(media_type, ext):
       setCropDimensions(pX, pY, pW, pH);
     }}
 
+    // --- ⬇️ YEH NAYA FUNCTION ADD KIYA GAYA HAI ⬇️ ---
+    function toggleInputEditability(isLocked) {{
+        const inputsToToggle = [
+            elements.previewX, elements.previewY, elements.previewW, elements.previewH,
+            elements.actualX, elements.actualY, elements.actualW, elements.actualH
+        ];
+        
+        inputsToToggle.forEach(input => {{
+            if (input) {{
+                input.disabled = isLocked;
+                
+                const label = input.previousElementSibling;
+                if (label && label.classList.contains('info-input-label')) {{
+                    if (isLocked) {{
+                        label.style.cursor = 'not-allowed';
+                        label.style.opacity = '0.5';
+                    }} else {{
+                        label.style.cursor = 'ew-resize';
+                        label.style.opacity = '1';
+                    }}
+                }}
+            }}
+        }});
+    }}
+    // --- ⬆️ NAYA FUNCTION END ⬆️ ---
+
     // --- IMPROVEMENT: Modified setMediaZoom for localStorage ---
     function setMediaZoom(newZoom, initialLoad = false) {{
       if (state.mediaType !== 'image' && state.mediaType !== 'video') return;
@@ -1785,6 +1811,10 @@ def get_javascript_code(media_type, ext):
             
             if (!inputElement) return;
 
+            // --- ⬇️ YEH LINE MODIFY KI GAYI HAI ⬇️ ---
+            if (inputElement.disabled) return;
+            // --- ⬆️ MODIFICATION END ⬆️ ---
+
             state.isLabelDragging = true;
             state.labelDragInput = inputElement;
             state.labelDragStartX = e.clientX;
@@ -1864,12 +1894,18 @@ def get_javascript_code(media_type, ext):
       elements.customW.addEventListener("input", utils.debounce(updateCustomAspectRatio, 300));
       elements.customH.addEventListener("input", utils.debounce(updateCustomAspectRatio, 300));
       
+      // --- ⬇️ YEH BLOCK MODIFY KIYA GAYA HAI ⬇️ ---
       elements.keepAspect.addEventListener('change', (e) => {{
           state.keepAspect = e.target.checked;
+          
+          // Inputs ko naye state ke hisaab se lock/unlock karein
+          toggleInputEditability(state.keepAspect);
+          
           if (state.keepAspect) {{
               applyCurrentAspectRatio();
           }}
       }});
+      // --- ⬆️ MODIFICATION END ⬆️ ---
       
       document.addEventListener("keydown", handleKeyboard);
       
@@ -1944,6 +1980,11 @@ def get_javascript_code(media_type, ext):
               label.addEventListener('mousedown', (e) => labelDragHandler.start(e, input));
           }}
       }});
+
+      // --- ⬇️ YEH LINE ADD KI GAYI HAI ⬇️ ---
+      // Page load par initial state set karein (default 'checked' hai)
+      toggleInputEditability(elements.keepAspect.checked);
+      // --- ⬆️ MODIFICATION END ⬆️ ---
     }}
 
     document.addEventListener("DOMContentLoaded", function() {{
