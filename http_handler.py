@@ -96,7 +96,6 @@ class CropHandler(BaseHTTPRequestHandler):
             if self.server.verbose:
                 print(f"Error checking rotation: {e}", file=sys.stderr)
             return 0
-    # --- ROTATION FIX: END ---
 
     def _get_media_type_info(self, file_path):
         ext = os.path.splitext(file_path)[1].lower()
@@ -117,7 +116,7 @@ class CropHandler(BaseHTTPRequestHandler):
         media_tag = ""
         media_type = ""
         controls_html = ""
-        rotation = 0  # --- ROTATION FIX: Default rotation ---
+        rotation = 0
 
         if ext in supported_image_exts:
             # CHANGE 1: Added oncontextmenu="return false;" to <img>
@@ -189,8 +188,7 @@ class CropHandler(BaseHTTPRequestHandler):
                 media_section = media_wrapper_start + media_tag + click_overlay + crop_div + '</div>' + controls_html
             else:
                 media_section = media_wrapper_start + media_tag + '</div>' + controls_html 
-            
-            # --- ROTATION FIX: Inject rotation data into HTML for JS ---
+
             rotation_script = f"""
   <script>
     // Data injected from Python server
@@ -557,7 +555,6 @@ class CropHandler(BaseHTTPRequestHandler):
       -moz-user-drag: none;
       -o-user-drag: none;
       user-drag: none;
-      /* CHANGE 5: Added -webkit-touch-callout: none; to the CSS rule */
       -webkit-touch-callout: none;
       { "controls: none;" if media_type == "video" else "" } 
     }}
@@ -1788,7 +1785,7 @@ class CropHandler(BaseHTTPRequestHandler):
                     ffmpeg_command = f'ffmpeg -i "{input_file_path}" -vf "{crop_filter}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "{output_file_name}"'
 
                 print(f"\n# {crop_filter}")
-                print(f"\n{ffmpeg_command}")
+                print(f"{ffmpeg_command}")
                 
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
