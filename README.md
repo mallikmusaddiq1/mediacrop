@@ -125,6 +125,7 @@ mediacrop "/path/to/your/mediafile.mp4"
 | `--port <port>`   | `-p <port>` | Specify a custom server port (default: 8000).                               |
 | `--host <host>`   |           | Specify a host address (default: 127.0.0.1).                                |
 | `--verbose`       | `-v`      | Enable detailed logs for debugging.                                         |
+| `--secure`        | `-s`      | Protect the server with a one-time security token.                          |
 | `--version`       |           | Show program's version number and exit.                                     |
 | `--help`          | `-h`      | Show this help message and exit.                                            |
 
