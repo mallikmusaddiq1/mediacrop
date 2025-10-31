@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="mediacrop",
-    version="5.3.0",
+    version="5.4.0",
     author="Mallik Mohammad Musaddiq",
     author_email="mallikmusaddiq1@gmail.com",
     description="A CLI tool featuring a localhost web interface for visually determining FFmpeg crop coordinates of any media file.",
