@@ -215,6 +215,14 @@ def get_javascript_code(media_type, ext):
         }}
       }}
     }};
+
+    function getSecureUrl(baseUrl) {{
+        if (window.MEDIA_TOKEN) {{
+            const connector = baseUrl.includes('?') ? '&' : '?';
+            return `${{baseUrl}}${{connector}}token=${{window.MEDIA_TOKEN}}`;
+        }}
+        return baseUrl;
+    }}
     
     function getStorageKey() {{
         if (!state.naturalWidth || !state.naturalHeight || !state.fileExtension) return null;
@@ -508,7 +516,7 @@ def get_javascript_code(media_type, ext):
     }}
 
     function updateFileInfo() {{
-      fetch('/file', {{ method: 'HEAD' }})
+      fetch(getSecureUrl('/file'), {{ method: 'HEAD' }})
         .then(response => {{
           const contentLength = response.headers.get('content-length');
           if (contentLength) {{
@@ -1393,7 +1401,7 @@ def get_javascript_code(media_type, ext):
            }}
        }}
 
-      fetch("/save", {{
+      fetch(getSecureUrl("/save"), {{
         method: "POST",
         headers: {{ "Content-Type": "application/json" }},
         body: JSON.stringify({{ 
@@ -1419,7 +1427,7 @@ def get_javascript_code(media_type, ext):
           notification.innerHTML = `
             <div class="notification-title">Crop Saved Successfully!</div>
             <div class="notification-code">${{data.crop_filter || `crop=${{finalW}}:${{finalH}}:${{finalX}}:${{finalY}}`}}</div>
-            <div class="notification-subtitle">Crop filter string printed to terminal.</div>
+            <div class="notification-subtitle">FFmpeg command printed to terminal.</div>
           `;
           document.body.appendChild(notification);
           setTimeout(() => {{
@@ -1881,6 +1889,11 @@ def get_javascript_code(media_type, ext):
     }}
 
     document.addEventListener("DOMContentLoaded", function() {{
+      if (window.MEDIA_TOKEN && !window.location.search.includes(window.MEDIA_TOKEN)) {{
+          document.body.innerHTML = "<h1>403 Forbidden</h1><p>Invalid or missing access token.</p>";
+          return;
+      }}
+    
       initializeTheme();
       setupEventListeners();
       
@@ -1901,23 +1914,32 @@ def get_javascript_code(media_type, ext):
       }};
 
       if (mediaElement) {{
+          const mediaUrl_dataSrc = mediaElement.getAttribute('data-src');
+          
           if (mediaType === 'image') {{
-              if (mediaElement.complete) {{
+              if (mediaElement.complete && !mediaUrl_dataSrc) {{
                   console.log("Image already complete (cached). Initializing.");
                   initializeCrop();
               }} else {{
                   console.log("Image not complete. Adding 'load' and 'error' listeners.");
                   mediaElement.addEventListener('load', initializeCrop, {{ once: true }});
                   mediaElement.addEventListener('error', onMediaError, {{ once: true }});
+                  if (mediaUrl_dataSrc) {{
+                      mediaElement.src = getSecureUrl(mediaUrl_dataSrc);
+                  }}
               }}
           }} else if (mediaType === 'video' || mediaType === 'audio') {{
-              if (mediaElement.readyState >= 1) {{ // 1 = HAVE_METADATA
+              if (mediaElement.readyState >= 1 && !mediaUrl_dataSrc) {{
                   console.log("Media already has metadata. Initializing.");
                   initializeCrop();
               }} else {{
                   console.log("Media metadata not loaded. Adding 'loadedmetadata' and 'error' listeners.");
                   mediaElement.addEventListener('loadedmetadata', initializeCrop, {{ once: true }});
                   mediaElement.addEventListener('error', onMediaError, {{ once: true }});
+                  if (mediaUrl_dataSrc) {{
+                      mediaElement.src = getSecureUrl(mediaUrl_dataSrc);
+                      mediaElement.load();
+                  }}
               }}
           }}
           

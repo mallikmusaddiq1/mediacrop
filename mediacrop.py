@@ -8,6 +8,7 @@ import json
 import time
 import subprocess
 import argparse
+import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 
@@ -18,7 +19,7 @@ from utils import get_file_info
 media_file = None
 verbose = False
 
-__version__ = "5.3.0"
+__version__ = "5.4.0"
 DEFAULT_PORT = 8000
 
 def port_type(value):
@@ -78,12 +79,16 @@ A CLI tool featuring a localhost web interface for visually determining FFmpeg c
         help='Show detailed server logs.'
     )
     parser.add_argument(
+        '-s', '--secure',
+        action='store_true',
+        help='Protect the server with a one-time security token.'
+    )
+    parser.add_argument(
         '--version',
         action='version',
         version=f'mediacrop {__version__}'
     )
-    
-    # --help aur --version ab argparse khud handle karega
+
     return parser.parse_args()
 
 
@@ -145,14 +150,11 @@ def open_browser_auto(url, verbose=False):
             print(f"'webbrowser.open()' raised an exception: {e}")
         return False
 
-    # --- Failure ---
     if verbose:
         print("All automatic browser opening methods failed.")
     return False
 
 def main():
-    # --- Step 1: Perfected Argument Parsing ---
-    # Manual sys.argv checks hata diye gaye hain
     args = parse_arguments()
 
     global media_file, verbose
@@ -160,6 +162,10 @@ def main():
     verbose = args.verbose
     port = args.port
     host = args.host
+    
+    auth_token = None
+    if args.secure:
+        auth_token = str(uuid.uuid4())
 
     if not os.path.exists(media_file):
         print(f"Error: File not found - {media_file}", file=sys.stderr)
@@ -179,9 +185,9 @@ def main():
         else:
             size_str = f"{file_size_mb:.2f} MB"
 
-        print(f"File   : {file_info['name']}")
-        print(f"Size   : {size_str}")
-        print(f"Format : {file_info['extension'].upper().replace('.', '')}")
+        print(f"File     : {file_info['name']}")
+        print(f"Size     : {size_str}")
+        print(f"Format   : {file_info['extension'].upper().replace('.', '')}")
   
     server = None
     original_port = port
@@ -192,14 +198,14 @@ def main():
             server = HTTPServer((host, port), CropHandler)
             server.media_file = media_file
             server.verbose = verbose
-            break  # Port mil gaya, loop se bahar niklo
+            server.auth_token = auth_token
+            break
         except OSError as e:
             if e.errno == 98:
                 if attempt == 0:
                     print(f"Port {original_port} is busy, trying next available port...")
                 port += 1
             else:
-                # Koi aur server error
                 print(f"Server error: {e}", file=sys.stderr)
                 sys.exit(1)
 
@@ -208,11 +214,16 @@ def main():
         sys.exit(1)
   
     url = f"http://{host}:{port}"
+    if auth_token:
+        url += f"/?token={auth_token}"
+        
     try:
         auto_open_success = open_browser_auto(url, verbose)
         
         if not verbose:
-            print(f"Server : {url}")
+            print(f"Server   : {url}")
+            if auth_token:
+                print("Security : Use this exact URL with the token to access.")
             if not auto_open_success:
                 print(f"Open {url} in browser...") 
             print()
@@ -230,6 +241,8 @@ def main():
         if verbose:
             print(f"Server running on port {port}")
             print(f"Serving file: {media_file}")
+            if auth_token:
+                print(f"Security Token: {auth_token}")
             if not auto_open_success:
                 print(f"Open {url} in browser...")
       

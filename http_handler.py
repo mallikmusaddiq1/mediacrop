@@ -8,7 +8,7 @@ import mimetypes
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from http_handler_js import get_javascript_code
 
 mimetypes.init()
@@ -24,6 +24,18 @@ class CropHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         if self.server.verbose:
             super().log_message(format, *args)
+
+    def _get_token_from_query(self):
+        query = urlparse(self.path).query
+        return parse_qs(query).get('token', [None])[0]
+
+    def _is_authorized(self):
+        server_token = getattr(self.server, 'auth_token', None)
+        if server_token is None:
+            return True
+        
+        client_token = self._get_token_from_query()
+        return client_token == server_token
 
     def _get_media_rotation(self, file_path, media_type):
         """
@@ -119,15 +131,12 @@ class CropHandler(BaseHTTPRequestHandler):
         rotation = 0
 
         if ext in supported_image_exts:
-            # CHANGE 1: Added oncontextmenu="return false;" to <img>
-            media_tag = f'<img id="media" src="/file?v={cache_buster}" onload="initializeCrop()" draggable="false" alt="Media file" oncontextmenu="return false;" />'
+            media_tag = f'<img id="media" data-src="/file?v={cache_buster}" onload="initializeCrop()" draggable="false" alt="Media file" oncontextmenu="return false;" />'
             media_type = "image"
         elif ext in supported_video_exts:
-            # CHANGE 2: Added oncontextmenu="return false;" to <video>
-            media_tag = f'<video id="media" preload="metadata" src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" draggable="false" oncontextmenu="return false;"></video>'
+            media_tag = f'<video id="media" preload="metadata" data-src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" draggable="false" oncontextmenu="return false;"></video>'
             media_type = "video"
             
-            # --- ROTATION FIX: Check rotation for videos ---
             rotation = self._get_media_rotation(file_path, media_type)
             
             controls_html = '''
@@ -158,41 +167,40 @@ class CropHandler(BaseHTTPRequestHandler):
   </div>
 </div>'''
         elif ext in supported_audio_exts:
-            # Added oncontextmenu="return false;" to <audio> as well for consistency
-            media_tag = f'<audio id="media" controls preload="metadata" src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" oncontextmenu="return false;"></audio>'
+            media_tag = f'<audio id="media" controls preload="metadata" data-src="/file?v={cache_buster}" onloadedmetadata="initializeCrop()" oncontextmenu="return false;"></audio>'
             media_type = "audio"
             controls_html = ""
         else:
             media_tag = '<div id="unsupported"><div class="unsupported-content"><div class="unsupported-icon">📁</div><div class="unsupported-text">Format not supported for preview</div><div class="unsupported-subtext">You can still set crop coordinates (default size: 500x300)</div></div></div>'
             media_type = "unsupported"
         
-        # --- ROTATION FIX: Return rotation value ---
         return ext, media_tag, media_type, controls_html, rotation
 
     def do_GET(self):
         path = urlparse(self.path).path
         
-        # --- ROTATION FIX: Get rotation value from info function ---
         ext, media_tag, media_type, controls_html, rotation = self._get_media_type_info(self.server.media_file)
 
         if path == "/":
+            client_token = self._get_token_from_query()
+            if not self._is_authorized():
+                self.send_error(403, "Forbidden: Invalid or missing token")
+                return
+
             media_wrapper_start = '<div id="media-wrapper">'
-            # CHANGE 3: Added oncontextmenu and -webkit-touch-callout to the crop_div
             crop_div = '<div id="crop" class="crop-box" style="left:50px;top:50px;width:200px;height:150px; -webkit-touch-callout: none;" tabindex="0" role="img" aria-label="Crop selection area" oncontextmenu="return false;"><div class="resize-handle nw"></div><div class="resize-handle ne"></div><div class="resize-handle sw"></div><div class="resize-handle se"></div><div class="resize-handle n"></div><div class="resize-handle s"></div><div class="resize-handle w"></div><div class="resize-handle e"></div></div>'
             
-            # CHANGE 4: Added a click_overlay div to block events on the dimmed area
             click_overlay = '<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 49; -webkit-touch-callout: none;" oncontextmenu="return false;"></div>'
             
             if media_type in ["image", "video", "unsupported"]:
-                # Inserted the click_overlay between the media tag and the crop box
                 media_section = media_wrapper_start + media_tag + click_overlay + crop_div + '</div>' + controls_html
             else:
                 media_section = media_wrapper_start + media_tag + '</div>' + controls_html 
 
             rotation_script = f"""
   <script>
-    // Data injected from Python server
     window.MEDIA_ROTATION = {rotation};
+    window.MEDIA_TOKEN = "{client_token or ''}";
   </script>
 """
             
@@ -1623,6 +1631,9 @@ class CropHandler(BaseHTTPRequestHandler):
             self.wfile.write(js_content.encode("utf-8"))
 
         elif path == "/file":
+            if not self._is_authorized():
+                self.send_error(403, "Forbidden: Invalid or missing token")
+                return
             try:
                 if not os.path.exists(self.server.media_file) or not os.access(self.server.media_file, os.R_OK):
                     self.send_error(404, f"File not found or not readable: {self.server.media_file}")
@@ -1699,6 +1710,9 @@ class CropHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self):
         if urlparse(self.path).path == "/file":
+            if not self._is_authorized():
+                self.send_error(403, "Forbidden: Invalid or missing token")
+                return
             try:
                 if not os.path.exists(self.server.media_file) or not os.access(self.server.media_file, os.R_OK):
                     self.send_error(404, "File not found or not readable")
@@ -1716,9 +1730,14 @@ class CropHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_error(500, f"Error getting file info: {str(e)}")
         else:
-            self.send_error(404, "Not Found")
+            self.send_error(44, "Not Found")
+            
     def do_POST(self):
-        if self.path == "/save":
+        path = urlparse(self.path).path
+        if path == "/save":
+            if not self._is_authorized():
+                self.send_error(403, "Forbidden: Invalid or missing token")
+                return
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 if length > 10000:
