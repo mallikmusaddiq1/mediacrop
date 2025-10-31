@@ -179,7 +179,7 @@ Contributions are warmly welcomed! Whether you fix bugs, add features, or improv
 * Commit your changes with a clear, descriptive message.
 * Open a Pull Request.
 
-If you find this project valuable, please star ⭐ it on GitHub to support future development!
+If you find this project valuable, **please star ⭐** it on GitHub to support future development!
 
 ---
 
